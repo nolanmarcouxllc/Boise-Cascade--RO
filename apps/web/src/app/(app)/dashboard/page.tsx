@@ -2,10 +2,18 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { money, num, shortDate } from "@/lib/format";
 import { DEFAULT_CONFIG } from "@/lib/config";
-import { RouteCompare } from "@/components/route-compare";
+import { RouteMaps } from "@/components/route-maps";
 import type { AnalysisRun, ConsolidationFinding, RunTotals } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+type DeliveryPoint = {
+  id: string;
+  lat: number | null;
+  lng: number | null;
+  customer_name: string | null;
+  truck_id: string | null;
+};
 
 export default async function DashboardPage({
   searchParams,
@@ -42,6 +50,16 @@ export default async function DashboardPage({
     .order("est_cost_usd", { ascending: false });
   const findings = (findingsData ?? []) as ConsolidationFinding[];
 
+  // Delivery coordinates for this run's upload, used to draw the lane maps.
+  let records: DeliveryPoint[] = [];
+  if (run.upload_id) {
+    const { data: recData } = await supabase
+      .from("delivery_records")
+      .select("id, lat, lng, customer_name, truck_id")
+      .eq("upload_id", run.upload_id);
+    records = (recData ?? []) as DeliveryPoint[];
+  }
+
   const totals = run.params?.totals;
 
   return (
@@ -71,32 +89,16 @@ export default async function DashboardPage({
         <>
           <HeroAndBeforeAfter totals={totals} />
           <FindingsTable findings={findings} />
-          <RouteComparisons findings={findings} />
+          {findings.length > 0 && (
+            <RouteMaps
+              findings={findings}
+              depot={DEFAULT_CONFIG.costs.depot}
+              records={records}
+            />
+          )}
         </>
       )}
     </div>
-  );
-}
-
-function RouteComparisons({ findings }: { findings: ConsolidationFinding[] }) {
-  if (findings.length === 0) return null;
-  const depot = DEFAULT_CONFIG.costs.depot;
-  return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-ink">
-          What happened vs. what to do
-        </h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Each line is one truck&apos;s round trip from the yard. On the left,
-          several trucks drove to the same place on the same day. On the right,
-          one truck covers it — the rest is the wasted mileage and cost.
-        </p>
-      </div>
-      {findings.map((f) => (
-        <RouteCompare key={f.id} finding={f} depot={depot} />
-      ))}
-    </section>
   );
 }
 
