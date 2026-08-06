@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { money, num, shortDate } from "@/lib/format";
+import { DEFAULT_CONFIG } from "@/lib/config";
+import { RouteCompare } from "@/components/route-compare";
 import type { AnalysisRun, ConsolidationFinding, RunTotals } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -69,9 +71,32 @@ export default async function DashboardPage({
         <>
           <HeroAndBeforeAfter totals={totals} />
           <FindingsTable findings={findings} />
+          <RouteComparisons findings={findings} />
         </>
       )}
     </div>
+  );
+}
+
+function RouteComparisons({ findings }: { findings: ConsolidationFinding[] }) {
+  if (findings.length === 0) return null;
+  const depot = DEFAULT_CONFIG.costs.depot;
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-ink">
+          What happened vs. what to do
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Each line is one truck&apos;s round trip from the yard. On the left,
+          several trucks drove to the same place on the same day. On the right,
+          one truck covers it — the rest is the wasted mileage and cost.
+        </p>
+      </div>
+      {findings.map((f) => (
+        <RouteCompare key={f.id} finding={f} depot={depot} />
+      ))}
+    </section>
   );
 }
 
@@ -218,10 +243,10 @@ function FindingsTable({ findings }: { findings: ConsolidationFinding[] }) {
 function TypeBadge({ type }: { type?: string }) {
   const isGeo = type === "geo_cluster";
   return (
-    <span className={`badge ${isGeo ? "badge-orange" : "badge-blue"}`}>
+    <span className={`badge ${isGeo ? "badge-orange" : "badge-green"}`}>
       <span
         className="mr-1.5 inline-block h-2 w-2 rounded-full"
-        style={{ backgroundColor: isGeo ? "#f58231" : "#4363d8" }}
+        style={{ backgroundColor: isGeo ? "#f58231" : "#0a8a43" }}
       />
       {isGeo ? "geo cluster" : "same customer"}
     </span>

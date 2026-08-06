@@ -113,7 +113,7 @@ export default async function AnalyzePage() {
 function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
     completed: "badge-green",
-    running: "badge-blue",
+    running: "badge-amber",
     pending: "badge-slate",
     failed: "badge-crimson",
   };

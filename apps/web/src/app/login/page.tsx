@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { LogoMark } from "@/components/logo";
 
 type Mode = "password" | "magic";
 
@@ -79,9 +80,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <div className="mb-8">
           <div className="mb-1 flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-brand-700">
-            <span className="grid h-6 w-6 place-items-center rounded-md bg-brand-600 text-xs font-bold text-white shadow-[0_2px_8px_rgba(67,99,216,0.35)]">
-              RC
-            </span>
+            <LogoMark className="h-7 w-7 text-brand-600" />
             Route Consolidation
           </div>
           <h1 className="text-2xl font-semibold text-ink">

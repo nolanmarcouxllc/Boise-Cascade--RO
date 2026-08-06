@@ -6,8 +6,8 @@
  * Light theme matched to apps/engine/output/map.html: the map renders on the
  * pale CartoDB Positron basemap, with vivid categorical markers on top. So:
  * a light canvas + faint grid, and the marker colors used as accents.
- *   #e6194b crimson (waste / alert)   #3cb44b green (savings / after)
- *   #f58231 orange (geo cluster)      #4363d8 blue (primary / same-customer)
+ *   #e6194b crimson (waste / alert)   #0a8a43 Boise Cascade green (primary / savings)
+ *   #f58231 orange (geo cluster)
  */
 :root {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -23,10 +23,10 @@
   --ink-muted: #55617a;
   --ink-faint: #8a94a6;
 
-  --accent: #4363d8; /* blue */
-  --accent-hi: #3450c0;
+  --accent: #0a8a43; /* Boise Cascade green */
+  --accent-hi: #077a39;
   --alert: #e6194b; /* crimson */
-  --good: #16a34a; /* green (readable on light) */
+  --good: #0a8a43; /* green (savings) */
   --geo: #f58231; /* orange */
 
   color-scheme: light;
@@ -40,7 +40,7 @@
     background-image:
       radial-gradient(
         1100px 520px at 50% -8%,
-        rgba(67, 99, 216, 0.08),
+        rgba(10, 138, 67, 0.08),
         transparent 70%
       ),
       linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
@@ -74,7 +74,7 @@
   select:focus,
   textarea:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(67, 99, 216, 0.18);
+    box-shadow: 0 0 0 3px rgba(10, 138, 67, 0.18);
   }
 }
 
@@ -131,9 +131,9 @@
     font-size: 0.75rem;
     font-weight: 500;
   }
-  .badge-blue {
-    background: rgba(67, 99, 216, 0.12);
-    color: #3450c0;
+  .badge-amber {
+    background: rgba(217, 119, 6, 0.14);
+    color: #b45309;
   }
   .badge-orange {
     background: rgba(245, 130, 49, 0.14);

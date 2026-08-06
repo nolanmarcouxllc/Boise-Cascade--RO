@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth";
 import { Nav } from "@/components/nav";
 import { SignOutButton } from "@/components/sign-out-button";
+import { LogoMark } from "@/components/logo";
 
 // Shell for every authenticated page. Guarantees a session + an org; otherwise
 // bounces to /login or /onboarding. The org guarantee is what makes downstream
@@ -21,9 +22,7 @@ export default async function AppLayout({
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="grid h-7 w-7 place-items-center rounded-md bg-brand-600 text-xs font-bold text-white shadow-[0_2px_8px_rgba(67,99,216,0.35)]">
-                RC
-              </div>
+              <LogoMark className="h-8 w-8 text-brand-600" />
               <span className="text-sm font-semibold text-ink">
                 {ctx.org.name}
               </span>

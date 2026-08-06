@@ -9,16 +9,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: "#eef1fc",
-          100: "#dfe5f9",
-          200: "#c3ccf3",
-          400: "#7b93ec",
-          500: "#5c79e6",
-          600: "#4363d8",
-          700: "#3450c0",
+          50: "#e9f6ee",
+          100: "#cdebd8",
+          200: "#9dd6b4",
+          400: "#35a866",
+          500: "#159a4c",
+          600: "#0a8a43",
+          700: "#077a39",
         },
         alert: "#e6194b",
-        good: "#16a34a",
+        good: "#0a8a43",
         geo: "#f58231",
         ink: {
           DEFAULT: "#0f172a",
