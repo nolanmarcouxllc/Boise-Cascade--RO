@@ -1,0 +1,57 @@
+# Route Consolidation Diagnostic — Phase 0 Engine
+
+A CLI tool that reads a delivery CSV and finds **consolidation candidates**:
+same-day deliveries that were split across separate trucks when one truck could
+have carried them. It quantifies the waste (miles, fleet-hours, dollars) and
+renders a before/after summary plus a map.
+
+Everything client-specific lives in a YAML config, so a second client is a new
+config + CSV — not a rewrite.
+
+## Pipeline
+
+```
+run.py
+  ├─ ingest.py    raw CSV        → standard schema (column mapping from config)
+  ├─ geocode.py   addresses      → lat/lng (uses given coords, then cache, then OSM)
+  ├─ detect.py    deliveries     → candidate groups (same-customer OR geo-cluster)
+  ├─ quantify.py  groups         → wasted miles / fleet-hours / $ (from config rates)
+  └─ report.py    results        → output/summary.md + output/map.html (folium)
+```
+
+## Run it
+
+```bash
+cd apps/engine
+python -m venv .venv && . .venv/Scripts/activate   # Windows; use bin/activate on macOS/Linux
+pip install -r requirements.txt
+python run.py --config config/boise_cascade.yaml --data data/boise_cascade_deliveries.csv
+```
+
+Outputs land in `apps/engine/output/`:
+- `summary.md` — before/after table and the dollar figure
+- `map.html` — depot, all stops, candidate groups colored and linked
+
+The bundled synthetic dataset has four obvious duplicates baked in (two
+same-customer pairs, one same-customer triple, and one geo-cluster of two
+different tenants in the same business park) so the run produces a real
+before/after with a dollar figure out of the box.
+
+## Onboarding a second client
+
+1. Copy `config/boise_cascade.yaml` → `config/<client>.yaml`.
+2. Update `schema:` to map the client's CSV columns to the standard fields.
+3. Update `costs:` with the client's rate card and depot location.
+4. Drop their CSV in `data/` and point `data_file:` (or `--data`) at it.
+
+No code changes. If the client's CSV lacks `lat`/`lng`, geocode.py fills them in
+via OpenStreetMap/Nominatim and caches the results in `cache/`.
+
+## The waste model (Phase 0)
+
+For a candidate group served by *N* distinct trucks, one truck was enough. Each
+of the other *N-1* trucks is charged one depot→stop→depot out-and-back — the trip
+consolidation would remove. Miles convert to fleet-hours via `avg_speed_mph` plus
+`service_time_minutes` per redundant stop, then to dollars via the rate card. See
+`quantify.py` for the exact formula. This is intentionally simple and defensible;
+Phase 1 can swap in real routing.

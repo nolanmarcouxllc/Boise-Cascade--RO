@@ -1,0 +1,21 @@
+order_id,delivery_date,customer_id,customer_name,address,city,state,zip,truck_id,weight_lbs,lat,lng
+1001,2026-08-03,FBS,Franklin Building Supply,5240 W Franklin Rd,Boise,ID,83705,T-01,3200,43.5895,-116.2660
+1002,2026-08-03,FBS,Franklin Building Supply,5240 W Franklin Rd,Boise,ID,83705,T-02,1500,43.5895,-116.2660
+1003,2026-08-03,HD1802,Home Depot #1802,6300 W State St,Boise,ID,83703,T-03,2100,43.6520,-116.2790
+1004,2026-08-03,HD1802,Home Depot #1802,6300 W State St,Boise,ID,83703,T-05,900,43.6520,-116.2790
+1005,2026-08-03,NAMPA,Nampa Lumber Co,1600 3rd St S,Nampa,ID,83651,T-04,4000,43.5665,-116.5610
+1006,2026-08-03,EAGLE,Eagle Hardware,3033 E State St,Eagle,ID,83616,T-01,1200,43.6955,-116.3300
+1007,2026-08-03,MICRON,Micron Campus Receiving,8000 S Federal Way,Boise,ID,83716,T-06,5000,43.5150,-116.1400
+1020,2026-08-04,SCR,Silver Creek Realty,3405 E Overland Rd Ste 100,Meridian,ID,83642,T-02,800,43.5880,-116.3560
+1021,2026-08-04,IMW,Idaho Millwork Co,3405 E Overland Rd Ste 120,Meridian,ID,83642,T-04,1100,43.5882,-116.3558
+1022,2026-08-04,CALD,Caldwell Supply Yard,2211 Blaine St,Caldwell,ID,83605,T-03,2600,43.6480,-116.6540
+1023,2026-08-04,KUNA,Kuna Builders,490 W 4th St,Kuna,ID,83634,T-05,1700,43.4918,-116.4201
+1024,2026-08-04,GC,Garden City Depot,4000 W Chinden Blvd,Garden City,ID,83714,T-01,2200,43.6350,-116.2680
+1025,2026-08-04,DTBOISE,Downtown Boise Office,250 S 5th St,Boise,ID,83702,T-06,600,43.6135,-116.2010
+1040,2026-08-05,FBS,Franklin Building Supply,5240 W Franklin Rd,Boise,ID,83705,T-01,1800,43.5895,-116.2660
+1041,2026-08-05,FBS,Franklin Building Supply,5240 W Franklin Rd,Boise,ID,83705,T-03,1300,43.5895,-116.2660
+1042,2026-08-05,FBS,Franklin Building Supply,5240 W Franklin Rd,Boise,ID,83705,T-05,700,43.5895,-116.2660
+1043,2026-08-05,BENCH,Boise Bench Contractor,2100 Vista Ave,Boise,ID,83705,T-02,2400,43.5860,-116.2110
+1044,2026-08-05,SEBOISE,SE Boise Residential,3200 S Bown Way,Boise,ID,83706,T-04,500,43.5720,-116.1660
+1045,2026-08-05,MERN,Meridian North Site,2700 W McMillan Rd,Meridian,ID,83646,T-06,3100,43.6580,-116.4020
+1046,2026-08-05,HD1802,Home Depot #1802,6300 W State St,Boise,ID,83703,T-02,950,43.6520,-116.2790

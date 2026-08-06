@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Engine generated artifacts
+apps/engine/output/
+apps/engine/cache/

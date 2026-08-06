@@ -1,0 +1,4 @@
+pandas>=2.0
+geopy>=2.4
+folium>=0.15
+PyYAML>=6.0
