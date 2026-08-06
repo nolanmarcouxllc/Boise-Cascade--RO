@@ -1,0 +1,157 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Dark theme matched to apps/engine/output/map.html:
+ * near-black map canvas, faint grid, vivid categorical markers as accents.
+ *   #e6194b crimson (waste / alert)   #3cb44b green (savings / after)
+ *   #f58231 orange (geo cluster)      #4363d8 blue (primary / same-customer)
+ */
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --bg: #0b0e14;
+  --surface: #141a24;
+  --surface-2: #1b2230;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --ink: #e8ecf4;
+  --ink-muted: #9aa6b8;
+  --ink-faint: #63708a;
+
+  --accent: #4363d8; /* blue */
+  --accent-hi: #5c79e6;
+  --alert: #e6194b; /* crimson */
+  --good: #3cb44b; /* green */
+  --geo: #f58231; /* orange */
+
+  color-scheme: dark;
+}
+
+@layer base {
+  body {
+    color: var(--ink);
+    background-color: var(--bg);
+    /* soft blue glow up top + faint map grid, fixed like a canvas */
+    background-image:
+      radial-gradient(
+        1100px 520px at 50% -8%,
+        rgba(67, 99, 216, 0.12),
+        transparent 70%
+      ),
+      linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+    background-size: 100% 100%, 44px 44px, 44px 44px;
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    border-radius: 0.5rem;
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ink);
+    outline: none;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--ink-faint);
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(67, 99, 216, 0.22);
+  }
+  option {
+    color: #0b0e14;
+  }
+}
+
+@layer components {
+  .panel {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s,
+      color 0.15s,
+      opacity 0.15s;
+  }
+  .btn-primary {
+    background-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background-color: var(--accent-hi);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+  }
+  .btn-ghost {
+    border: 1px solid var(--border-strong);
+    color: var(--ink-muted);
+  }
+  .btn-ghost:hover {
+    color: var(--ink);
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  /* categorical badges echoing the map markers */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .badge-blue {
+    background: rgba(67, 99, 216, 0.16);
+    color: #a9baf5;
+  }
+  .badge-orange {
+    background: rgba(245, 130, 49, 0.16);
+    color: #f6b487;
+  }
+  .badge-green {
+    background: rgba(60, 180, 75, 0.16);
+    color: #8fdb9a;
+  }
+  .badge-crimson {
+    background: rgba(230, 25, 75, 0.16);
+    color: #f2909f;
+  }
+  .badge-slate {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--ink-muted);
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3547 transparent;
+}
