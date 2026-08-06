@@ -68,7 +68,7 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-ink-muted">
         Upload a delivery CSV first.{" "}
-        <Link href="/uploads" className="font-medium text-brand-400">
+        <Link href="/uploads" className="font-medium text-brand-700">
           Go to uploads →
         </Link>
       </div>
@@ -144,7 +144,7 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
 
 function Spinner() {
   return (
-    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-brand-400" />
+    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
   );
 }
 

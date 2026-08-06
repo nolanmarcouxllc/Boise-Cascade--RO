@@ -49,7 +49,7 @@ export function UploadForm() {
           type="file"
           accept=".csv,text/csv"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="!w-auto !border-0 !bg-transparent !p-0 text-sm text-ink-muted file:mr-4 file:rounded-lg file:border-0 file:bg-brand-600/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-400 hover:file:bg-brand-600/25"
+          className="!w-auto !border-0 !bg-transparent !p-0 text-sm text-ink-muted file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
         />
         <button
           type="submit"

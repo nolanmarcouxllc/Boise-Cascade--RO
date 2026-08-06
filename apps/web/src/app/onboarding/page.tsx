@@ -11,7 +11,7 @@ export default async function OnboardingPage() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-6">
-          <div className="mb-1 text-sm font-medium uppercase tracking-wide text-brand-400">
+          <div className="mb-1 text-sm font-medium uppercase tracking-wide text-brand-700">
             One more step
           </div>
           <h1 className="text-2xl font-semibold text-ink">

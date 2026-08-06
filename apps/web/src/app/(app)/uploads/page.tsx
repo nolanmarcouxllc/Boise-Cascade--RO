@@ -48,7 +48,7 @@ export default async function UploadsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--border)] bg-white/[0.03] text-left text-xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left text-xs uppercase tracking-wide text-ink-faint">
                     <th className="px-4 py-3 font-medium">File</th>
                     <th className="px-4 py-3 font-medium">Uploaded</th>
                     <th className="px-4 py-3 font-medium">Status</th>
@@ -59,7 +59,7 @@ export default async function UploadsPage() {
                   {uploads.map((u) => (
                     <tr
                       key={u.id}
-                      className="border-b border-white/5 last:border-0"
+                      className="border-b border-slate-100 last:border-0"
                     >
                       <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                         {u.storage_path.split("/").pop()}

@@ -21,8 +21,8 @@ export function Nav() {
             href={l.href}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
               active
-                ? "bg-brand-600/15 text-brand-400"
-                : "text-ink-muted hover:bg-white/5 hover:text-ink"
+                ? "bg-brand-600/10 text-brand-700"
+                : "text-ink-muted hover:bg-black/5 hover:text-ink"
             }`}
           >
             {l.label}

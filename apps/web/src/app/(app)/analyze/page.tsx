@@ -60,7 +60,7 @@ export default async function AnalyzePage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--border)] bg-white/[0.03] text-left text-xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left text-xs uppercase tracking-wide text-ink-faint">
                     <th className="px-4 py-3 font-medium">Run</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 text-right font-medium">Candidates</th>
@@ -72,7 +72,7 @@ export default async function AnalyzePage() {
                   {runs.map((r) => (
                     <tr
                       key={r.id}
-                      className="border-b border-white/5 last:border-0"
+                      className="border-b border-slate-100 last:border-0"
                     >
                       <td className="px-4 py-3 text-ink-muted">
                         {shortDate(r.created_at)}
@@ -92,7 +92,7 @@ export default async function AnalyzePage() {
                         {r.status === "completed" && (
                           <Link
                             href={`/dashboard?run=${r.id}`}
-                            className="text-sm font-medium text-brand-400 hover:text-brand-500"
+                            className="text-sm font-medium text-brand-700 hover:text-brand-600"
                           >
                             View →
                           </Link>

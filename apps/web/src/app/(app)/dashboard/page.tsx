@@ -80,10 +80,10 @@ function HeroAndBeforeAfter({ totals }: { totals?: RunTotals }) {
   return (
     <section className="grid gap-4 lg:grid-cols-3">
       {/* Hero: the number */}
-      <div className="relative overflow-hidden rounded-2xl border border-brand-600/40 bg-gradient-to-b from-brand-600/15 to-transparent p-6 lg:col-span-1">
+      <div className="panel relative overflow-hidden border-brand-200 bg-gradient-to-b from-brand-50 to-white p-6 lg:col-span-1">
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-brand-600/30 blur-3xl"
+          className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-brand-600/15 blur-3xl"
         />
         <div className="text-sm font-medium text-ink-muted">
           Estimated recoverable cost
@@ -98,7 +98,7 @@ function HeroAndBeforeAfter({ totals }: { totals?: RunTotals }) {
           <span className="font-medium text-ink">{totals.candidate_groups}</span>{" "}
           consolidation candidates.
         </p>
-        <div className="mt-4 border-t border-white/10 pt-3 text-xs text-ink-faint">
+        <div className="mt-4 border-t border-[var(--border)] pt-3 text-xs text-ink-faint">
           At the 3PL benchmark rate, the same miles run{" "}
           {money(totals.cost_3pl_benchmark)}.
         </div>
@@ -171,7 +171,7 @@ function FindingsTable({ findings }: { findings: ConsolidationFinding[] }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] bg-white/[0.03] text-left text-xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left text-xs uppercase tracking-wide text-ink-faint">
               <th className="px-4 py-3 font-medium">Customer / cluster</th>
               <th className="px-4 py-3 font-medium">Date</th>
               <th className="px-4 py-3 font-medium">Type</th>
@@ -185,7 +185,7 @@ function FindingsTable({ findings }: { findings: ConsolidationFinding[] }) {
             {findings.map((f) => (
               <tr
                 key={f.id}
-                className="border-b border-white/5 last:border-0 hover:bg-white/[0.03]"
+                className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
               >
                 <td className="px-4 py-3 font-medium text-ink">
                   {f.customer_name}

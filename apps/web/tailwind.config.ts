@@ -9,22 +9,25 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
+          50: "#eef1fc",
+          100: "#dfe5f9",
+          200: "#c3ccf3",
           400: "#7b93ec",
           500: "#5c79e6",
           600: "#4363d8",
           700: "#3450c0",
         },
         alert: "#e6194b",
-        good: "#3cb44b",
+        good: "#16a34a",
         geo: "#f58231",
         ink: {
-          DEFAULT: "#e8ecf4",
-          muted: "#9aa6b8",
-          faint: "#63708a",
+          DEFAULT: "#0f172a",
+          muted: "#55617a",
+          faint: "#8a94a6",
         },
         surface: {
-          DEFAULT: "#141a24",
-          2: "#1b2230",
+          DEFAULT: "#ffffff",
+          2: "#f7f9fc",
         },
       },
       fontFamily: {

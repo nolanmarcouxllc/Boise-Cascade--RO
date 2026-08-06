@@ -17,11 +17,11 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[rgba(11,14,20,0.82)] backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[rgba(255,255,255,0.82)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="grid h-7 w-7 place-items-center rounded-md bg-brand-600 text-xs font-bold text-white shadow-[0_0_20px_rgba(67,99,216,0.5)]">
+              <div className="grid h-7 w-7 place-items-center rounded-md bg-brand-600 text-xs font-bold text-white shadow-[0_2px_8px_rgba(67,99,216,0.35)]">
                 RC
               </div>
               <span className="text-sm font-semibold text-ink">

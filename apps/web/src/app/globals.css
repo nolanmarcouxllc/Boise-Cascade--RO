@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 /*
- * Dark theme matched to apps/engine/output/map.html:
- * near-black map canvas, faint grid, vivid categorical markers as accents.
+ * Light theme matched to apps/engine/output/map.html: the map renders on the
+ * pale CartoDB Positron basemap, with vivid categorical markers on top. So:
+ * a light canvas + faint grid, and the marker colors used as accents.
  *   #e6194b crimson (waste / alert)   #3cb44b green (savings / after)
  *   #f58231 orange (geo cluster)      #4363d8 blue (primary / same-customer)
  */
@@ -12,38 +13,38 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 
-  --bg: #0b0e14;
-  --surface: #141a24;
-  --surface-2: #1b2230;
-  --border: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --bg: #f4f6f9; /* positron-like pale gray */
+  --surface: #ffffff;
+  --surface-2: #f7f9fc;
+  --border: rgba(15, 23, 42, 0.1);
+  --border-strong: rgba(15, 23, 42, 0.16);
 
-  --ink: #e8ecf4;
-  --ink-muted: #9aa6b8;
-  --ink-faint: #63708a;
+  --ink: #0f172a;
+  --ink-muted: #55617a;
+  --ink-faint: #8a94a6;
 
   --accent: #4363d8; /* blue */
-  --accent-hi: #5c79e6;
+  --accent-hi: #3450c0;
   --alert: #e6194b; /* crimson */
-  --good: #3cb44b; /* green */
+  --good: #16a34a; /* green (readable on light) */
   --geo: #f58231; /* orange */
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 @layer base {
   body {
     color: var(--ink);
     background-color: var(--bg);
-    /* soft blue glow up top + faint map grid, fixed like a canvas */
+    /* soft blue glow up top + faint map grid, fixed like a basemap canvas */
     background-image:
       radial-gradient(
         1100px 520px at 50% -8%,
-        rgba(67, 99, 216, 0.12),
+        rgba(67, 99, 216, 0.08),
         transparent 70%
       ),
-      linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+      linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
     background-size: 100% 100%, 44px 44px, 44px 44px;
     background-attachment: fixed;
     min-height: 100vh;
@@ -55,7 +56,7 @@
   textarea {
     width: 100%;
     border-radius: 0.5rem;
-    background-color: var(--surface-2);
+    background-color: var(--surface);
     border: 1px solid var(--border);
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
@@ -73,10 +74,7 @@
   select:focus,
   textarea:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(67, 99, 216, 0.22);
-  }
-  option {
-    color: #0b0e14;
+    box-shadow: 0 0 0 3px rgba(67, 99, 216, 0.18);
   }
 }
 
@@ -85,6 +83,9 @@
     background-color: var(--surface);
     border: 1px solid var(--border);
     border-radius: 1rem;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 1px 3px rgba(15, 23, 42, 0.06);
   }
 
   .btn {
@@ -114,10 +115,11 @@
   .btn-ghost {
     border: 1px solid var(--border-strong);
     color: var(--ink-muted);
+    background-color: var(--surface);
   }
   .btn-ghost:hover {
     color: var(--ink);
-    background-color: rgba(255, 255, 255, 0.04);
+    background-color: #f1f5f9;
   }
 
   /* categorical badges echoing the map markers */
@@ -130,28 +132,28 @@
     font-weight: 500;
   }
   .badge-blue {
-    background: rgba(67, 99, 216, 0.16);
-    color: #a9baf5;
+    background: rgba(67, 99, 216, 0.12);
+    color: #3450c0;
   }
   .badge-orange {
-    background: rgba(245, 130, 49, 0.16);
-    color: #f6b487;
+    background: rgba(245, 130, 49, 0.14);
+    color: #b45309;
   }
   .badge-green {
-    background: rgba(60, 180, 75, 0.16);
-    color: #8fdb9a;
+    background: rgba(22, 163, 74, 0.13);
+    color: #15803d;
   }
   .badge-crimson {
-    background: rgba(230, 25, 75, 0.16);
-    color: #f2909f;
+    background: rgba(230, 25, 75, 0.12);
+    color: #be123c;
   }
   .badge-slate {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.06);
     color: var(--ink-muted);
   }
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a3547 transparent;
+  scrollbar-color: #cbd5e1 transparent;
 }
