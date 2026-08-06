@@ -84,14 +84,21 @@ def _make_geocoder(cfg: dict):
     )
 
 
-def geocode_dataframe(df: pd.DataFrame, config: dict, engine_dir: str = ".") -> pd.DataFrame:
+def geocode_dataframe(df: pd.DataFrame, config: dict, engine_dir: str = ".",
+                      cache=None) -> pd.DataFrame:
     """Return `df` with lat/lng populated. Adds a `geocode_source` column
-    ('given' | 'cache' | 'lookup' | 'FAILED') for transparency."""
+    ('given' | 'cache' | 'lookup' | 'FAILED') for transparency.
+
+    `cache` is any object exposing get(key)/put(key,lat,lng)/flush() -- e.g. the
+    file-backed _Cache (default) or db.SupabaseCache. This is the one seam that
+    lets the same geocoding logic run against a local JSON file or the shared
+    Supabase geocode_cache table."""
     cfg = config.get("geocoding", {})
-    cache_path = os.path.join(engine_dir, cfg.get("cache_file", "cache/geocode_cache.json"))
     default_region = cfg.get("default_region", "")
 
-    cache = _Cache(cache_path)
+    if cache is None:
+        cache_path = os.path.join(engine_dir, cfg.get("cache_file", "cache/geocode_cache.json"))
+        cache = _Cache(cache_path)
     geocode_fn = None  # built on first real lookup
 
     lats, lngs, sources = [], [], []

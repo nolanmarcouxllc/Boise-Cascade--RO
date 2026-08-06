@@ -37,6 +37,26 @@ same-customer pairs, one same-customer triple, and one geo-cluster of two
 different tenants in the same business park) so the run produces a real
 before/after with a dollar figure out of the box.
 
+## Supabase (server-side, optional)
+
+The run is fully local by default. Opt into Supabase with flags; all DB access
+uses the **service_role** key (server-side only) read from the project-root
+`.env` as `SUPABASE_SERVICE_ROLE_KEY`.
+
+```bash
+# ingest a CSV, then persist records + geocode cache + run + findings to Supabase
+python run.py --data data/boise_cascade_deliveries.csv --write-db --db-cache
+
+# re-analyze records already stored in Supabase (no CSV)
+python run.py --source db --write-db --db-cache
+```
+
+Flags: `--source csv|db`, `--write-db`, `--db-cache`, `--org NAME` / `--org-id UUID`,
+`--upload-id UUID`. Tables used: `orgs`, `uploads`, `delivery_records`,
+`geocode_cache`, `analysis_runs`, `consolidation_findings`. Schema mapping (e.g.
+`weight_lbs`->`order_size`, grouping on `customer_name` since the DB has no
+`customer_id`) lives in `db.py`. Verify connectivity with `check_supabase.py`.
+
 ## Onboarding a second client
 
 1. Copy `config/boise_cascade.yaml` → `config/<client>.yaml`.
