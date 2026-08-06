@@ -73,10 +73,13 @@ export type ConsolidatedPlan = {
   group_id: string;
   type: "same_customer" | "geo_cluster";
   truck_ids: string[];
-  customer_names: string[];
+  customer_names?: string[];
+  customer_ids?: string[];
   order_ids: string[];
   delivery_count: number;
   distinct_trucks: number;
+  total_weight_lbs?: number;
+  min_trucks_needed?: number;
   leg_miles: number;
   centroid: [number, number];
   cost_3pl_benchmark: number;

@@ -83,7 +83,9 @@ def _summary_text(result: dict, config: dict) -> str:
     a("")
     a("## Rate card used")
     a("")
-    a(f"- Cost per mile: {_money(r['cost_per_mile'], cur)}")
+    a(f"- Cost per mile: {_money(r['cost_per_mile'], cur)}"
+      + (f" + {_money(r.get('fuel_surcharge_per_mile', 0), cur)} fuel surcharge"
+         if r.get("fuel_surcharge_per_mile") else ""))
     a(f"- Cost per fleet-hour: {_money(r['cost_per_fleet_hour'], cur)}")
     a(f"- 3PL benchmark: {_money(r['third_party_rate_per_mile'], cur)}/mi")
     a(f"- Avg speed: {r['avg_speed_mph']} mph · service time: {r['service_time_minutes']:.0f} min/stop")

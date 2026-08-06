@@ -30,16 +30,19 @@ export function quantify(
   const c = config.costs;
   const depot: [number, number] = [c.depot.lat, c.depot.lng];
   const serviceHours = c.service_time_minutes / 60;
+  const mileRate = c.cost_per_mile + (c.fuel_surcharge_per_mile ?? 0);
 
   const out: QuantifiedGroup[] = groups.map((g) => {
-    const redundant = g.distinct_trucks - 1;
+    // Redundant trucks = trucks used minus the fewest that could legally have
+    // carried the combined weight (weight-aware, from detect).
+    const redundant = g.distinct_trucks - g.min_trucks_needed;
     const leg = distanceMiles(depot, g.centroid);
     const wastedMiles = redundant * 2 * leg;
     const wastedHours =
       (c.avg_speed_mph ? wastedMiles / c.avg_speed_mph : 0) +
       redundant * serviceHours;
     const costInternal =
-      wastedMiles * c.cost_per_mile + wastedHours * c.cost_per_fleet_hour;
+      wastedMiles * mileRate + wastedHours * c.cost_per_fleet_hour;
     const cost3pl = wastedMiles * c.third_party_rate_per_mile;
 
     return {
@@ -71,8 +74,11 @@ export function quantify(
       cost_internal: sum((q) => q.cost_internal),
       cost_3pl_benchmark: sum((q) => q.cost_3pl_benchmark),
       truck_visits_before: truckVisitsBefore,
-      truck_visits_after: out.length, // one truck per group
-      truck_visits_eliminated: truckVisitsBefore - out.length,
+      // after = fewest legal trucks per group (weight-aware), not always 1
+      truck_visits_after: out.reduce((a, q) => a + q.group.min_trucks_needed, 0),
+      truck_visits_eliminated:
+        truckVisitsBefore -
+        out.reduce((a, q) => a + q.group.min_trucks_needed, 0),
     },
   };
 }
@@ -87,6 +93,8 @@ export function toPlan(q: QuantifiedGroup): ConsolidatedPlan {
     order_ids: q.group.order_ids.map(String),
     delivery_count: q.group.delivery_count,
     distinct_trucks: q.group.distinct_trucks,
+    total_weight_lbs: q.group.total_weight_lbs,
+    min_trucks_needed: q.group.min_trucks_needed,
     leg_miles: q.leg_miles,
     centroid: q.group.centroid,
     cost_3pl_benchmark: q.cost_3pl_benchmark,

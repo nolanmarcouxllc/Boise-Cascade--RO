@@ -99,11 +99,12 @@ def main(argv=None) -> int:
     df = geocode.geocode_dataframe(df, config, engine_dir=ENGINE_DIR, cache=cache)
 
     # --- persist records (csv -> DB) after geocoding so coords are stored -----
+    order_id_map = None
     if args.write_db and args.source == "csv":
         if upload_id is None:
             src_name = os.path.basename(_resolve(args.data or config.get("data_file", "deliveries.csv")))
             upload_id = db.create_upload(client, org_id, storage_path=src_name)
-        db.insert_delivery_records(client, org_id, df, upload_id)
+        order_id_map = db.insert_delivery_records(client, org_id, df, upload_id)
 
     # --- detect + quantify ---------------------------------------------------
     df, groups = detect.find_candidates(df, config)
@@ -116,10 +117,14 @@ def main(argv=None) -> int:
             "source": args.source,
             "detection": config.get("detection", {}),
             "costs": config.get("costs", {}),
-            "totals": result["totals"],
+            "totals": {
+                **result["totals"],
+                "records_analyzed": int(df["lat"].notna().sum()),
+                "records_skipped_no_coords": int(df["lat"].isna().sum()),
+            },
         }
         run_id = db.create_analysis_run(client, org_id, params, upload_id, status="running")
-        db.insert_findings(client, org_id, run_id, result)
+        db.insert_findings(client, org_id, run_id, result, order_id_map)
         db.update_run_status(client, run_id, "completed")
 
     # --- report (always writes local summary + map) --------------------------

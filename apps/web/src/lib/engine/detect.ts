@@ -10,6 +10,7 @@ export type Stop = {
   customer_key: string; // grouping key (customer_name in this schema)
   customer_name: string;
   truck_id: string;
+  weight_lbs: number; // 0 when unknown
   lat: number;
   lng: number;
 };
@@ -23,6 +24,8 @@ export type CandidateGroup = {
   order_ids: string[];
   delivery_count: number;
   distinct_trucks: number;
+  total_weight_lbs: number;
+  min_trucks_needed: number;
   centroid: [number, number];
 };
 
@@ -47,10 +50,11 @@ export function findCandidates(
     if (det.same_customer) {
       const byCustomer = groupBy(dayStops, (s) => s.customer_key);
       for (const [, custStops] of byCustomer) {
-        if (distinctTrucks(custStops) >= det.min_trucks) {
+        const trucks = distinctTrucks(custStops);
+        if (trucks >= det.min_trucks && trucks > minTrucksNeeded(custStops, det.max_load_lbs)) {
           custStops.forEach((s) => claimed.add(s));
           groups.push(
-            summarize(custStops, `${day}|CUST|${custStops[0].customer_key}`, "same_customer", day),
+            summarize(custStops, `${day}|CUST|${custStops[0].customer_key}`, "same_customer", day, det.max_load_lbs),
           );
         }
       }
@@ -60,9 +64,10 @@ export function findCandidates(
     if (det.geo_cluster) {
       const remaining = dayStops.filter((s) => !claimed.has(s));
       for (const cluster of clusterByDistance(remaining, det.cluster_radius_miles)) {
-        if (distinctTrucks(cluster) >= det.min_trucks) {
+        const trucks = distinctTrucks(cluster);
+        if (trucks >= det.min_trucks && trucks > minTrucksNeeded(cluster, det.max_load_lbs)) {
           groups.push(
-            summarize(cluster, `${day}|GEO|${groups.length}`, "geo_cluster", day),
+            summarize(cluster, `${day}|GEO|${groups.length}`, "geo_cluster", day, det.max_load_lbs),
           );
         }
       }
@@ -74,6 +79,15 @@ export function findCandidates(
 
 function distinctTrucks(stops: Stop[]): number {
   return new Set(stops.map((s) => s.truck_id)).size;
+}
+
+// Fewest legal trucks that could carry the group's combined weight. A split is
+// waste only if fewer trucks would have sufficed — a two-truck split of 74k lbs
+// is correct dispatch, never a candidate.
+function minTrucksNeeded(stops: Stop[], maxLoadLbs: number): number {
+  if (!maxLoadLbs) return 1;
+  const total = stops.reduce((a, s) => a + (s.weight_lbs || 0), 0);
+  return Math.max(1, Math.ceil(total / maxLoadLbs));
 }
 
 // Greedy single-link clustering by geodesic distance. Fine for a day's stops.
@@ -108,6 +122,7 @@ function summarize(
   groupId: string,
   type: CandidateGroup["type"],
   day: string,
+  maxLoadLbs: number,
 ): CandidateGroup {
   const lat = mean(stops.map((s) => s.lat));
   const lng = mean(stops.map((s) => s.lng));
@@ -120,6 +135,8 @@ function summarize(
     order_ids: stops.map((s) => s.order_id),
     delivery_count: stops.length,
     distinct_trucks: distinctTrucks(stops),
+    total_weight_lbs: stops.reduce((a, s) => a + (s.weight_lbs || 0), 0),
+    min_trucks_needed: minTrucksNeeded(stops, maxLoadLbs),
     centroid: [lat, lng],
   };
 }

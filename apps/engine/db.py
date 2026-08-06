@@ -121,10 +121,14 @@ def create_upload(client, org_id: str, storage_path: str, status: str = "process
 # --------------------------------------------------------------------------- #
 # delivery_records
 # --------------------------------------------------------------------------- #
-def insert_delivery_records(client, org_id: str, df: pd.DataFrame, upload_id=None) -> int:
-    """Write standard-schema rows into delivery_records. Returns count inserted."""
+def insert_delivery_records(client, org_id: str, df: pd.DataFrame, upload_id=None) -> dict:
+    """Write standard-schema rows into delivery_records. Returns a mapping of
+    source order_id -> inserted DB uuid, so findings can reference real record
+    ids (the web app's lane maps resolve stops through them)."""
     rows = []
+    source_ids = []
     for _, r in df.iterrows():
+        source_ids.append(str(r.get("order_id")))
         rows.append({
             "org_id": org_id,
             "upload_id": upload_id,
@@ -138,11 +142,14 @@ def insert_delivery_records(client, org_id: str, df: pd.DataFrame, upload_id=Non
             "lat": _num(r.get("lat")),
             "lng": _num(r.get("lng")),
         })
+    inserted_ids: list[str] = []
     for i in range(0, len(rows), _INSERT_CHUNK):
-        client.table("delivery_records").insert(rows[i:i + _INSERT_CHUNK]).execute()
+        res = client.table("delivery_records").insert(rows[i:i + _INSERT_CHUNK]).execute()
+        inserted_ids.extend(row["id"] for row in (res.data or []))
+    id_map = dict(zip(source_ids, inserted_ids))
     print(f"[db] inserted {len(rows)} delivery_records"
           + (f" for upload {upload_id}" if upload_id else ""))
-    return len(rows)
+    return id_map
 
 
 def fetch_delivery_records(client, org_id: str, upload_id=None) -> pd.DataFrame:
@@ -237,8 +244,12 @@ def update_run_status(client, run_id: str, status: str) -> None:
     print(f"[db] analysis_run {run_id} -> {status}")
 
 
-def insert_findings(client, org_id: str, run_id: str, result: dict) -> int:
-    """Write one consolidation_findings row per candidate group."""
+def insert_findings(client, org_id: str, run_id: str, result: dict,
+                    order_id_map: dict | None = None) -> int:
+    """Write one consolidation_findings row per candidate group. When
+    `order_id_map` is given (CSV ingest path), the plan's order_ids are
+    translated to delivery_records uuids so the web app can resolve stops."""
+    id_map = order_id_map or {}
     rows = []
     for g in result["groups"]:
         rows.append({
@@ -255,9 +266,12 @@ def insert_findings(client, org_id: str, run_id: str, result: dict) -> int:
                 "type": g["type"],
                 "truck_ids": g["truck_ids"],
                 "customer_ids": g["customer_ids"],
-                "order_ids": [str(o) for o in g["order_ids"]],
+                "customer_names": g["customer_names"],
+                "order_ids": [id_map.get(str(o), str(o)) for o in g["order_ids"]],
                 "delivery_count": g["delivery_count"],
                 "distinct_trucks": g["distinct_trucks"],
+                "total_weight_lbs": g.get("total_weight_lbs"),
+                "min_trucks_needed": g.get("min_trucks_needed"),
                 "leg_miles": g["leg_miles"],
                 "centroid": list(g["centroid"]),
                 "cost_3pl_benchmark": g["cost_3pl_benchmark"],

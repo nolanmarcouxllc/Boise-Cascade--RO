@@ -54,6 +54,7 @@ export async function processRun(
         customer_key: r.customer_name ?? r.id, // schema has no customer_id
         customer_name: r.customer_name ?? "(unnamed)",
         truck_id: r.truck_id,
+        weight_lbs: typeof r.order_size === "number" ? r.order_size : 0,
         lat,
         lng,
       });

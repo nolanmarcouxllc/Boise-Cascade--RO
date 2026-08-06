@@ -33,6 +33,8 @@ def quantify(groups: list[dict], config: dict) -> dict:
     depot_pt = (float(depot["lat"]), float(depot["lng"]))
 
     cost_per_mile = float(costs.get("cost_per_mile", 0.0))
+    fuel_surcharge = float(costs.get("fuel_surcharge_per_mile", 0.0))
+    mile_rate = cost_per_mile + fuel_surcharge
     cost_per_hour = float(costs.get("cost_per_fleet_hour", 0.0))
     tpl_per_mile = float(costs.get("third_party_rate_per_mile", 0.0))
     avg_speed = float(costs.get("avg_speed_mph", 30.0))
@@ -40,11 +42,14 @@ def quantify(groups: list[dict], config: dict) -> dict:
 
     per_group = []
     for g in groups:
-        redundant = g["distinct_trucks"] - 1
+        # Redundant trucks = trucks used minus the fewest that could legally
+        # have carried the combined weight (weight-aware; detect.py computes it).
+        needed = int(g.get("min_trucks_needed", 1))
+        redundant = g["distinct_trucks"] - needed
         leg_miles = distance_miles(depot_pt, g["centroid"])
         wasted_miles = redundant * 2.0 * leg_miles
         wasted_hours = (wasted_miles / avg_speed if avg_speed else 0.0) + redundant * service_hours
-        cost_internal = wasted_miles * cost_per_mile + wasted_hours * cost_per_hour
+        cost_internal = wasted_miles * mile_rate + wasted_hours * cost_per_hour
         cost_3pl = wasted_miles * tpl_per_mile
 
         per_group.append({
@@ -66,12 +71,14 @@ def quantify(groups: list[dict], config: dict) -> dict:
         "cost_3pl_benchmark": round(sum(x["cost_3pl_benchmark"] for x in per_group), 2),
         # before/after in truck-visits to the flagged locations
         "truck_visits_before": sum(x["distinct_trucks"] for x in per_group),
-        "truck_visits_after": len(per_group),  # one truck per group
+        # after = the fewest legal trucks per group (weight-aware), not always 1
+        "truck_visits_after": sum(int(x.get("min_trucks_needed", 1)) for x in per_group),
     }
     totals["truck_visits_eliminated"] = totals["truck_visits_before"] - totals["truck_visits_after"]
 
     rates = {
         "cost_per_mile": cost_per_mile,
+        "fuel_surcharge_per_mile": fuel_surcharge,
         "cost_per_fleet_hour": cost_per_hour,
         "third_party_rate_per_mile": tpl_per_mile,
         "avg_speed_mph": avg_speed,

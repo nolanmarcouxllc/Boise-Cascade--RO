@@ -32,10 +32,19 @@ Outputs land in `apps/engine/output/`:
 - `summary.md` — before/after table and the dollar figure
 - `map.html` — depot, all stops, candidate groups colored and linked
 
-The bundled synthetic dataset has four obvious duplicates baked in (two
-same-customer pairs, one same-customer triple, and one geo-cluster of two
-different tenants in the same business park) so the run produces a real
-before/after with a dollar figure out of the box.
+The bundled synthetic dataset models Boise Cascade's Westfield, MA facility:
+600 loads over 2 weeks (60/day, Mon-Fri), 53-ft flatbed distribution into the
+northeast/mid-Atlantic corridor. It bakes in the real failure mode this tool
+diagnoses — DMSi Agility releases orders in waves (06:30 / 09:45) and Trimble
+PC*MILER routes only what's visible at dispatch time, so second-wave orders go
+out on separate trucks into towns a wave-1 truck already covered with open
+capacity. 59 consolidation groups are planted (11 on the "bad Wednesday",
+2026-07-29), plus decoys that must NOT flag: legit heavy splits (combined
+weight over the 44,000-lb legal payload) and same-truck doubles. Regenerate
+with `tools/generate_dataset.py` (deterministic).
+
+Detection is weight-aware: a split is only a candidate if fewer trucks could
+legally have carried the combined load.
 
 ## Supabase (server-side, optional)
 

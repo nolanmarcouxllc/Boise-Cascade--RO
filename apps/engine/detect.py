@@ -16,6 +16,8 @@ Output:
 
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 
 from geocode import distance_miles
@@ -28,6 +30,7 @@ def find_candidates(df: pd.DataFrame, config: dict):
     radius = float(det.get("cluster_radius_miles", 0.5))
     do_customer = bool(det.get("same_customer", True))
     do_geo = bool(det.get("geo_cluster", True))
+    max_load = float(det.get("max_load_lbs", 0)) or None  # None = no weight gate
 
     work = df.copy().reset_index(drop=True)
     work["candidate_group"] = None
@@ -45,22 +48,23 @@ def find_candidates(df: pd.DataFrame, config: dict):
         if do_customer:
             for cust_id, cust_df in day_df.groupby("customer_id"):
                 trucks = cust_df["truck_id"].nunique()
-                if trucks >= min_trucks:
+                if trucks >= min_trucks and _weight_feasible(cust_df, trucks, max_load):
                     idx = list(cust_df.index)
                     gid = f"{day}|CUST|{cust_id}"
                     _assign(work, idx, gid, "same_customer")
                     claimed.update(idx)
-                    groups.append(_summarize(work, idx, gid, "same_customer", day))
+                    groups.append(_summarize(work, idx, gid, "same_customer", day, max_load))
 
         # --- geo clusters (over rows not already claimed) ----------------
         if do_geo:
             remaining = day_df.drop(index=[i for i in claimed if i in day_df.index])
             for members in _cluster_by_distance(remaining, radius):
                 sub = work.loc[members]
-                if sub["truck_id"].nunique() >= min_trucks:
+                trucks = sub["truck_id"].nunique()
+                if trucks >= min_trucks and _weight_feasible(sub, trucks, max_load):
                     gid = f"{day}|GEO|{len(groups)}"
                     _assign(work, members, gid, "geo_cluster")
-                    groups.append(_summarize(work, members, gid, "geo_cluster", day))
+                    groups.append(_summarize(work, members, gid, "geo_cluster", day, max_load))
 
     print(f"[detect] found {len(groups)} consolidation candidate group(s): "
           f"{sum(g['type'] == 'same_customer' for g in groups)} same-customer, "
@@ -71,6 +75,20 @@ def find_candidates(df: pd.DataFrame, config: dict):
 def _assign(df: pd.DataFrame, idx, gid: str, kind: str) -> None:
     df.loc[idx, "candidate_group"] = gid
     df.loc[idx, "candidate_type"] = kind
+
+
+def _min_trucks_needed(sub: pd.DataFrame, max_load: float | None) -> int:
+    """Fewest legal trucks that could carry the group's combined weight."""
+    if not max_load:
+        return 1
+    total = float(sub["weight_lbs"].fillna(0).sum()) if "weight_lbs" in sub else 0.0
+    return max(1, math.ceil(total / max_load))
+
+
+def _weight_feasible(sub: pd.DataFrame, distinct_trucks: int, max_load: float | None) -> bool:
+    """A split is waste only if FEWER trucks could legally have carried it.
+    Two trucks hauling a combined 74k lbs is correct dispatch, not a candidate."""
+    return distinct_trucks > _min_trucks_needed(sub, max_load)
 
 
 def _cluster_by_distance(day_df: pd.DataFrame, radius_miles: float):
@@ -100,11 +118,13 @@ def _cluster_by_distance(day_df: pd.DataFrame, radius_miles: float):
     return clusters
 
 
-def _summarize(df: pd.DataFrame, idx, gid: str, kind: str, day) -> dict:
+def _summarize(df: pd.DataFrame, idx, gid: str, kind: str, day,
+               max_load: float | None = None) -> dict:
     """Build the group record used downstream."""
     sub = df.loc[idx]
     lat = float(sub["lat"].mean())   # centroid -- representative stop location
     lng = float(sub["lng"].mean())
+    total_w = float(sub["weight_lbs"].fillna(0).sum()) if "weight_lbs" in sub else 0.0
     return {
         "group_id": gid,
         "date": str(day),
@@ -115,6 +135,8 @@ def _summarize(df: pd.DataFrame, idx, gid: str, kind: str, day) -> dict:
         "order_ids": sub["order_id"].tolist(),
         "delivery_count": int(len(sub)),
         "distinct_trucks": int(sub["truck_id"].nunique()),
+        "total_weight_lbs": total_w,
+        "min_trucks_needed": _min_trucks_needed(sub, max_load),
         "centroid": (lat, lng),
         "row_index": list(idx),
     }

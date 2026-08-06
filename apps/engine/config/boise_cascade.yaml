@@ -1,12 +1,16 @@
 # =============================================================================
-# Client config: Boise Cascade
+# Client config: Boise Cascade — Building Materials Distribution, Westfield MA
 # -----------------------------------------------------------------------------
-# Everything client-specific lives here. Onboarding a second client is a copy
-# of this file + their delivery CSV -- no code changes. The engine reads:
-#   - schema:     how to map THIS client's CSV columns to our standard fields
-#   - geocoding:  provider + cache settings for address -> lat/lng
-#   - detection:  what counts as a "consolidation candidate"
-#   - costs:      the rate card used to turn wasted trips into dollars
+# Everything client-specific lives here. A second client is a copy of this file
+# + their delivery CSV — no code changes.
+#
+# Context this tool diagnoses (why the duplicates exist at all):
+# DMSi Agility releases orders to logistics in batches through the day; Trimble
+# PC*MILER builds routes from whatever orders are visible at dispatch time.
+# Wave-1 trucks leave ~06:30 with open flatbed capacity, a second order wave
+# releases ~09:45, and separate trucks get dispatched into the same towns.
+# This engine ingests the FULL day after the fact and quantifies what the
+# incomplete order picture cost.
 # =============================================================================
 
 client:
@@ -17,9 +21,8 @@ client:
 data_file: "data/boise_cascade_deliveries.csv"
 
 # --- Column mapping ----------------------------------------------------------
-# LEFT  = our standard field name (used everywhere in the engine)
-# RIGHT = the column header in THIS client's raw CSV
-# A different client just remaps these; the engine code never changes.
+# LEFT  = standard field name (used everywhere in the engine)
+# RIGHT = column header in THIS client's raw CSV
 schema:
   order_id: "order_id"
   date: "delivery_date"
@@ -31,44 +34,51 @@ schema:
   zip: "zip"
   truck_id: "truck_id"
   weight_lbs: "weight_lbs"
-  # Optional pre-geocoded coordinates. If present + valid, geocoding is skipped
-  # for that row. Leave the columns out (or blank) to force live geocoding.
+  delivery_window: "dispatch_window"   # DMSi release wave (06:30 / 09:45)
   lat: "lat"
   lng: "lng"
 
 # --- Geocoding ---------------------------------------------------------------
 geocoding:
-  provider: "nominatim"                     # geopy Nominatim (OpenStreetMap)
+  provider: "nominatim"
   user_agent: "route-consolidation-diagnostic"
-  # Appended to bare addresses that don't already name a region, to disambiguate.
-  default_region: "Idaho, USA"
-  rate_limit_seconds: 1.1                    # Nominatim asks for <= 1 req/sec
-  cache_file: "cache/geocode_cache.json"     # relative to the engine dir
+  default_region: "USA"
+  rate_limit_seconds: 1.1
+  cache_file: "cache/geocode_cache.json"
 
 # --- Detection ---------------------------------------------------------------
-# A "consolidation candidate" = deliveries on the SAME day that could have ridden
-# one truck but didn't. Two ways to catch them:
 detection:
-  same_customer: true            # same customer_id, same day, >1 truck
-  geo_cluster: true              # different customers but ~same location, same day
-  cluster_radius_miles: 0.5      # stops within this radius = one geo cluster
-  min_trucks: 2                  # need >= this many DISTINCT trucks to flag a group
+  same_customer: true            # same customer, same day, >1 truck
+  geo_cluster: true              # different customers, ~same place, same day
+  cluster_radius_miles: 6.0      # same town / industrial park. Kept below the
+                                 # ops definition (15 mi) so dense corridors
+                                 # (Hartford, NYC metro) don't chain-link into
+                                 # one giant cluster; tune per client.
+  min_trucks: 2
+  max_load_lbs: 44000            # legal 53' flatbed payload. A split is only a
+                                 # candidate if FEWER trucks could legally have
+                                 # carried the combined weight — a two-truck
+                                 # split of 74k lbs is correct dispatch, not
+                                 # waste, and is never flagged.
+
+# --- Operations assumptions (documentation; engine reads only detection/costs)
+operations:
+  dispatch_waves: ["06:30", "09:45"]   # DMSi release -> PC*MILER build times
+  delivery_window: "07:00-17:00, forklift/Moffett unload"
+  equipment: "53-ft flatbed, all loads legal (no OD/OW)"
 
 # --- Cost model --------------------------------------------------------------
-# The rate card. This is where the dollar figure comes from. All defensible,
-# all client-tunable. See quantify.py for exactly how each rate is applied.
 costs:
   currency: "USD"
-  cost_per_mile: 2.10            # fully-loaded internal $/mile (fuel, maint, wear)
-  cost_per_fleet_hour: 68.00     # driver wage + vehicle time, $/hour
-  third_party_rate_per_mile: 3.25 # 3PL benchmark $/mile (opportunity comparison)
-  avg_speed_mph: 32.0            # to convert extra miles -> fleet-hours
-  service_time_minutes: 20       # avg time lost per redundant stop (park/unload/paperwork)
+  cost_per_mile: 1.82            # fuel + maintenance + tires + wear, $/mile
+  fuel_surcharge_per_mile: 0.45  # applied on top of cost_per_mile
+  cost_per_fleet_hour: 87.50     # driver wage+benefits + tractor fixed cost
+  third_party_rate_per_mile: 3.60 # northeast flatbed 3PL benchmark $/mile
+  avg_speed_mph: 45.0            # corridor is mostly interstate
+  service_time_minutes: 45       # flatbed strap-off + forklift unload per stop
 
-  # Depot / distribution center the trucks run out of. Wasted mileage is modeled
-  # as the extra depot->stop->depot out-and-backs that consolidation would remove.
   depot:
-    name: "Boise Cascade DC"
-    address: "1111 W Jefferson St, Boise, ID 83702"
-    lat: 43.6169
-    lng: -116.2064
+    name: "Boise Cascade BMD — Westfield"
+    address: "95 Elm Street, Westfield, MA 01085"
+    lat: 42.1248
+    lng: -72.7496
