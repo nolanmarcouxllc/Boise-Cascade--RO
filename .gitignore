@@ -12,3 +12,6 @@ venv/
 # Engine generated artifacts
 apps/engine/output/
 apps/engine/cache/
+
+.vercel
+.env*
