@@ -4,6 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { pullOrders, normalizeOrder, dmsiConfigured } from "@/lib/integrations/dmsi";
 import { writeAudit } from "@/lib/integrations/audit";
 import { recordSync } from "@/lib/integrations/status";
+import { checkRateLimit } from "@/lib/integrations/rate-limit";
+import { clientIp } from "@/lib/integrations/net";
+import { validateDeliveryRows } from "@/lib/integrations/validate";
+import type { DeliveryInsert } from "@/lib/engine/csv";
 
 export const runtime = "nodejs";
 
@@ -14,6 +18,9 @@ export async function POST(request: Request) {
   const guard = await requireOrg();
   if (!guard.ok) return guard.response;
   const orgId = guard.ctx.org.id;
+
+  const rl = checkRateLimit(`dmsi-pull:${clientIp(request)}`, { windowMs: 60_000, max: 60, hardBlock: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too Many Requests" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
   let date = "";
   try {
@@ -51,7 +58,19 @@ export async function POST(request: Request) {
     .insert({ org_id: orgId, storage_path: `dmsi/orders/${date}`, status: "processed" })
     .select("id")
     .single();
-  const rows = result.orders.map((o) => normalizeOrder(o, orgId, upload?.id ?? null));
+  const mapped = result.orders.map((o) => normalizeOrder(o, orgId, upload?.id ?? null));
+  // Validate before writing (all-or-nothing).
+  const toValidate: DeliveryInsert[] = mapped.map((m) => ({
+    customer_name: m.customer_name, address: m.address, delivery_date: m.delivery_date,
+    delivery_window: m.delivery_window, order_size: m.order_size, truck_id: m.truck_id,
+    route_id: m.route_id, lat: m.lat, lng: m.lng,
+  }));
+  const valid = validateDeliveryRows(toValidate);
+  if (!valid.ok) {
+    await writeAudit({ orgId, sourceSystem: "dmsi", eventType: "pull_orders", status: "rejected", message: `Validation failed at row ${valid.index}: ${valid.error}` });
+    return NextResponse.json({ error: `Invalid order ${valid.index}: ${valid.error}` }, { status: 400 });
+  }
+  const rows = valid.rows.map((r) => ({ ...r, org_id: orgId, upload_id: upload?.id ?? null }));
   if (rows.length) await admin.from("delivery_records").insert(rows);
 
   await writeAudit({ orgId, sourceSystem: "dmsi", eventType: "pull_orders", status: "success", recordCount: rows.length, message: `Pulled ${rows.length} order(s) for ${date}` });

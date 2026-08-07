@@ -16,7 +16,7 @@ export const maxDuration = 120;
 // Query: ?uploadId=<uuid> (defaults to latest completed run's upload)
 //        ?scope=day|week|all  &date=YYYY-MM-DD (anchor for day/week)
 export async function POST(request: Request) {
-  const guard = await requireOrg();
+  const guard = await requireOrg(request);
   if (!guard.ok) return guard.response;
   const orgId = guard.ctx.org.id;
   const admin = createAdminClient();

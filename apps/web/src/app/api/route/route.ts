@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 // each leg is an ordered list of [lat,lng] stops. Returns geometry + which
 // provider drew it (pcmiler | osrm | straight). Auth-gated.
 export async function POST(request: Request) {
-  const guard = await requireOrg();
+  const guard = await requireOrg(request);
   if (!guard.ok) return guard.response;
 
   let legs: LatLng[][] = [];

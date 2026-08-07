@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireOrg } from "@/lib/api-auth";
+import { requireOrg, assertOrg } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_CONFIG } from "@/lib/config";
 import { distanceMiles } from "@/lib/engine/geo";
@@ -17,8 +17,8 @@ type Rec = {
 // Full detail for one finding: why it happened (dispatch-wave split), the
 // per-truck manifest, embedded BEFORE (involved trucks' full day routes) and
 // AFTER (one consolidated route), and the numbers. Auth + org scoped.
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
-  const guard = await requireOrg();
+export async function POST(request: Request, { params }: { params: { id: string } }) {
+  const guard = await requireOrg(request);
   if (!guard.ok) return guard.response;
   const orgId = guard.ctx.org.id;
   const admin = createAdminClient();
@@ -27,9 +27,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     .from("consolidation_findings")
     .select("*")
     .eq("id", params.id)
-    .eq("org_id", orgId)
     .maybeSingle();
   if (!finding) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const iso = await assertOrg(finding.org_id, orgId);
+  if (iso) return iso;
 
   const plan = finding.consolidated_plan_json ?? {};
   const date: string = finding.date;

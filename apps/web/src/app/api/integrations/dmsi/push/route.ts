@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireOrg } from "@/lib/api-auth";
+import { requireOrg, assertOrg } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_CONFIG } from "@/lib/config";
 import { pushDispatchPlan, dmsiLive, type DispatchPlan } from "@/lib/integrations/dmsi";
@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 // simulation mode (DMSI_LIVE_MODE != true) the full path runs, the payload is
 // saved to the audit log, and the request goes to the local mock endpoint.
 export async function POST(request: Request) {
-  const guard = await requireOrg();
+  const guard = await requireOrg(request);
   if (!guard.ok) return guard.response;
   const orgId = guard.ctx.org.id;
 
@@ -28,9 +28,10 @@ export async function POST(request: Request) {
     .from("consolidation_findings")
     .select("*")
     .eq("id", findingId)
-    .eq("org_id", orgId)
     .maybeSingle();
   if (!finding) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const iso = await assertOrg(finding.org_id, orgId);
+  if (iso) return iso;
 
   const plan = finding.consolidated_plan_json ?? {};
   const { data: groupRecs } = await admin

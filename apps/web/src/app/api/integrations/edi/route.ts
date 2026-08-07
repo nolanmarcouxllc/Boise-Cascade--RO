@@ -6,6 +6,7 @@ import { writeAudit } from "@/lib/integrations/audit";
 import { recordSync } from "@/lib/integrations/status";
 import { clientIp, ipAllowed } from "@/lib/integrations/net";
 import { checkRateLimit } from "@/lib/integrations/rate-limit";
+import { validateDeliveryRows } from "@/lib/integrations/validate";
 
 export const runtime = "nodejs";
 
@@ -66,6 +67,15 @@ export async function POST(request: Request) {
     await writeAudit({ orgId, sourceSystem: "edi", eventType: type, status: "failure", message: "No records parsed", sourceIp: ip });
     return NextResponse.json({ error: "No records parsed", type }, { status: 400 });
   }
+
+  // Validate + sanitize every row; reject the whole batch on any bad field
+  // (no partial writes).
+  const valid = validateDeliveryRows(records);
+  if (!valid.ok) {
+    await writeAudit({ orgId, sourceSystem: "edi", eventType: type, status: "rejected", message: `Validation failed at row ${valid.index}: ${valid.error}`, sourceIp: ip });
+    return NextResponse.json({ error: `Invalid row ${valid.index}: ${valid.error}` }, { status: 400 });
+  }
+  records = valid.rows;
 
   // Write on the standard delivery_records path (one upload per inbound doc).
   const { data: upload } = await admin
