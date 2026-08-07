@@ -278,11 +278,32 @@ export function FleetMap({
           </span>
         </div>
 
+        {/* route-color legend — the pattern-recognition key */}
+        <div className="pointer-events-none absolute bottom-7 left-4 z-[500] rounded-lg border border-[var(--border)] bg-white/95 px-3 py-2 shadow-sm backdrop-blur">
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+            Route type
+          </div>
+          <div className="space-y-1">
+            <LegendRow color="#e6194b" label="Consolidation waste — duplicated territory" />
+            <LegendRow color="#f58231" label="Open capacity — could absorb a nearby stop" />
+            <LegendRow color="#2563eb" label="Clean, well-loaded run" />
+          </div>
+        </div>
+
         {selected && (
           <LanePanel route={selected} onClose={() => setSelectedKey(null)} />
         )}
       </div>
     </section>
+  );
+}
+
+function LegendRow({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="inline-block h-[3px] w-5 rounded-full" style={{ backgroundColor: color }} />
+      <span className="text-[11px] leading-tight text-ink-muted">{label}</span>
+    </div>
   );
 }
 
