@@ -3,6 +3,7 @@ import { getSessionContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getIntegrationStatus } from "@/lib/integrations/status";
 import { shortDate } from "@/lib/format";
+import { IntegrationArchitecture } from "@/components/integration-architecture";
 import { DmsiPullButton } from "./pull-button";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,8 @@ export default async function IntegrationsPage() {
           credentials.
         </p>
       </div>
+
+      <IntegrationArchitecture />
 
       <section className="grid gap-4 md:grid-cols-3">
         {statuses.map((s) => (
