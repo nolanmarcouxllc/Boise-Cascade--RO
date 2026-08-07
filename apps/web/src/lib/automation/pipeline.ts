@@ -16,6 +16,7 @@ import { recordSync } from "@/lib/integrations/status";
 import { resolveWithCache } from "@/lib/integrations/geometry-cache";
 import { activeProvider, type LatLng } from "@/lib/routing";
 import { pcmilerConfigured, pcmilerMileage } from "@/lib/pcmiler";
+import { pushDispatchPlan, dmsiLive, type DispatchPlan } from "@/lib/integrations/dmsi";
 
 export type AutomationResult = {
   orders: number;
@@ -164,10 +165,47 @@ async function run(orgId: string): Promise<AutomationResult> {
     if (planErr || !planRow) throw new Error(planErr?.message ?? "plan insert failed");
     const planId = planRow.id as string;
 
+    // 5) AUTOMATED DISPATCH PUSH: send the optimized plan to DMSi dispatch.
+    // Simulation mode (DMSI_LIVE_MODE=false) runs the identical code path but
+    // posts to the local mock and saves the exact payload to the audit log.
+    const dispatchPlan: DispatchPlan = {
+      planDate: plan.days[0]?.date ?? new Date().toISOString().slice(0, 10),
+      generatedBy: "automation-scheduler",
+      trucksBefore: plan.summary.trucksBefore,
+      trucksAfter: plan.summary.trucksAfter,
+      milesBefore: plan.summary.milesBefore,
+      milesAfter: plan.summary.milesAfter,
+      routes: allRoutes.map((r) => ({
+        truckId: r.truckId,
+        stops: r.stops.map((s, i) => ({
+          orderNumber: s.orderNumber ?? s.recordId,
+          customerName: s.customer,
+          sequence: i + 1,
+        })),
+        totalWeightLbs: r.totalWeightLbs,
+        totalMiles: r.miles,
+      })),
+    };
+    const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || "http://localhost:3000";
+    const pushRes = await pushDispatchPlan({
+      orgId,
+      plan: dispatchPlan,
+      mockUrl: `${origin.replace(/\/$/, "")}/api/integrations/dmsi-mock`,
+    });
+    const pushedAt = new Date().toISOString();
+    await admin
+      .from("optimized_plans")
+      .update({ plan: { ...planJson, pushedAt, pushMode: pushRes.mode, live: dmsiLive() } })
+      .eq("id", planId);
+
+    // 6) Queue: consolidating -> dispatched.
+    await markQueue(admin, rows.map((r) => r.id as string), "dispatched");
+
     const message =
       `${plan.summary.loads} loads -> ${plan.summary.trucksAfter} trucks ` +
       `(blind dispatch would use ${plan.summary.trucksBefore}); ` +
-      `$${plan.summary.recoverable.toLocaleString()} recoverable`;
+      `$${plan.summary.recoverable.toLocaleString()} recoverable; ` +
+      `pushed to DMSi (${pushRes.mode})`;
     await writeAudit({
       orgId,
       sourceSystem: "optimizer",

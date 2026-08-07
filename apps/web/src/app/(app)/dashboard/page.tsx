@@ -44,6 +44,26 @@ export default async function DashboardPage({
   // Default the fleet map to the worst day (most findings) — the headline.
   const worstDay = pickWorstDay(findings);
 
+  // Latest automated dispatch plan (last 24h) for the notification banner.
+  const { data: planRow } = await supabase
+    .from("optimized_plans")
+    .select("id, plan, trucks_before, trucks_after, created_at")
+    .gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const banner = planRow
+    ? {
+        planId: planRow.id as string,
+        loads: (planRow.plan?.summary?.loads as number) ?? 0,
+        trucks: (planRow.trucks_after as number) ?? 0,
+        trucksBefore: (planRow.trucks_before as number) ?? 0,
+        recoverable: (planRow.plan?.summary?.recoverable as number) ?? 0,
+        pushedAt: (planRow.plan?.pushedAt as string) ?? null,
+        pushMode: (planRow.plan?.pushMode as string) ?? null,
+      }
+    : null;
+
   const totals = run.params?.totals;
 
   return (
@@ -73,7 +93,7 @@ export default async function DashboardPage({
         <>
           <HeroAndBeforeAfter totals={totals} />
           {findings.length > 0 ? (
-            <DashboardClient findings={findings} initialDate={worstDay} />
+            <DashboardClient findings={findings} initialDate={worstDay} banner={banner} />
           ) : (
             <FindingsTable findings={findings} />
           )}

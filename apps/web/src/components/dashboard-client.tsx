@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { FleetMap, type FleetHighlight } from "@/components/fleet-map";
 import { FindingsPanel } from "@/components/findings-panel";
 import { FindingPanel } from "@/components/finding-drawer";
+import { PlanBanner, type PlanBannerData } from "@/components/plan-banner";
 import type { ConsolidationFinding } from "@/lib/types";
 
 // Ties every entry point to one consistent detail panel: selecting a finding —
@@ -12,9 +13,11 @@ import type { ConsolidationFinding } from "@/lib/types";
 export function DashboardClient({
   findings,
   initialDate,
+  banner,
 }: {
   findings: ConsolidationFinding[];
   initialDate?: string;
+  banner?: PlanBannerData | null;
 }) {
   const [selected, setSelected] = useState<ConsolidationFinding | null>(null);
 
@@ -48,6 +51,7 @@ export function DashboardClient({
 
   return (
     <div className="space-y-8">
+      {banner && <PlanBanner data={banner} />}
       <FleetMap initialDate={initialDate} highlight={highlight} onOpenFinding={openByRecord} />
       <FindingsPanel findings={findings} selectedId={selected?.id ?? null} onSelect={setSelected} />
       <FindingPanel findingId={selected?.id ?? null} onClose={() => setSelected(null)} />
