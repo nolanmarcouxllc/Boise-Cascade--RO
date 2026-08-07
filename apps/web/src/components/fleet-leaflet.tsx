@@ -28,12 +28,14 @@ export default function FleetLeaflet({
   selectedKey,
   onSelectRoute,
   fitKey,
+  emphasize,
 }: {
   depot: { lat: number; lng: number; name: string };
   routes: RouteView[];
   selectedKey: string | null;
   onSelectRoute: (key: string) => void;
   fitKey: string;
+  emphasize?: Set<string>;
 }) {
   const depotPos: [number, number] = [depot.lat, depot.lng];
 
@@ -59,14 +61,15 @@ export default function FleetLeaflet({
 
       {routes.map((r) => {
         const isSel = r.key === selectedKey;
+        const isEmph = emphasize?.has(r.truckId) ?? false;
         return (
           <Polyline
             key={r.key}
             positions={r.geometry}
             pathOptions={{
               color: routeColor(r),
-              weight: isSel ? 6 : 2.5,
-              opacity: isSel ? 1 : routeOpacity(r),
+              weight: isSel || isEmph ? 6 : 2.5,
+              opacity: isSel || isEmph ? 1 : routeOpacity(r),
               className: r.hasCandidate ? "pulse-route" : undefined,
             }}
             eventHandlers={{ click: () => onSelectRoute(r.key) }}

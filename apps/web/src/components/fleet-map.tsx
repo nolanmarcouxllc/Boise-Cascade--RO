@@ -60,7 +60,15 @@ function typeOf(r: RouteView): TypeFilter {
   return "clean";
 }
 
-export function FleetMap({ initialDate }: { initialDate?: string }) {
+export type FleetHighlight = { date: string; truckIds: string[]; groupId?: string } | null;
+
+export function FleetMap({
+  initialDate,
+  highlight,
+}: {
+  initialDate?: string;
+  highlight?: FleetHighlight;
+}) {
   const [scope, setScope] = useState<Scope>("day");
   const [anchor, setAnchor] = useState<string | undefined>(initialDate);
   const [mode, setMode] = useState<Mode>("before");
@@ -99,6 +107,16 @@ export function FleetMap({ initialDate }: { initialDate?: string }) {
       cancelled = true;
     };
   }, [scope, anchor]);
+
+  // When a finding is selected elsewhere, jump the map to that day + emphasize
+  // the involved trucks, and show BEFORE (that's the state that has the waste).
+  useEffect(() => {
+    if (!highlight) return;
+    setScope("day");
+    setAnchor(highlight.date);
+    setMode("before");
+  }, [highlight]);
+  const emphasize = useMemo(() => new Set(highlight?.truckIds ?? []), [highlight]);
 
   const routesForMode = useMemo(() => (data ? (mode === "before" ? data.before : data.after) : []), [data, mode]);
 
@@ -244,6 +262,7 @@ export function FleetMap({ initialDate }: { initialDate?: string }) {
               selectedKey={selectedKey}
               onSelectRoute={setSelectedKey}
               fitKey={fitKey}
+              emphasize={emphasize}
             />
           )}
         </div>

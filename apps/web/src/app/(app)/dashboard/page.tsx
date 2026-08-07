@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { money, num, shortDate } from "@/lib/format";
-import { FleetMap } from "@/components/fleet-map";
+import { DashboardClient } from "@/components/dashboard-client";
 import type { AnalysisRun, ConsolidationFinding, RunTotals } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -72,8 +72,11 @@ export default async function DashboardPage({
       ) : (
         <>
           <HeroAndBeforeAfter totals={totals} />
-          {findings.length > 0 && <FleetMap initialDate={worstDay} />}
-          <FindingsTable findings={findings} />
+          {findings.length > 0 ? (
+            <DashboardClient findings={findings} initialDate={worstDay} />
+          ) : (
+            <FindingsTable findings={findings} />
+          )}
         </>
       )}
     </div>
