@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseDeliveryCsv } from "@/lib/engine/csv";
+import { enqueueOrders } from "@/lib/automation/queue";
 
 export const runtime = "nodejs";
 
@@ -78,15 +79,30 @@ export async function POST(request: Request) {
     org_id: orgId,
     upload_id: upload.id,
   }));
-  const { error: recErr } = await admin
+  const { data: inserted, error: recErr } = await admin
     .from("delivery_records")
-    .insert(recordRows);
+    .insert(recordRows)
+    .select("id, route_id, delivery_date");
   if (recErr) {
     return NextResponse.json(
       { error: `Records insert failed: ${recErr.message}` },
       { status: 500 },
     );
   }
+
+  // CSV is the fallback entry point — it feeds the same order queue and goes
+  // through the same consolidation engine as EDI and API push.
+  await enqueueOrders(
+    admin,
+    orgId,
+    "csv",
+    (inserted ?? []).map((r, i) => ({
+      recordId: r.id as string,
+      orderNumber: (r.route_id as string) ?? null,
+      dispatchDate: ((r.delivery_date as string) ?? "").slice(0, 10) || null,
+      raw: parsed.rows[i],
+    })),
+  );
 
   return NextResponse.json({
     uploadId: upload.id,

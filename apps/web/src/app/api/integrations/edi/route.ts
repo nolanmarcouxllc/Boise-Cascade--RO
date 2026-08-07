@@ -7,6 +7,7 @@ import { recordSync } from "@/lib/integrations/status";
 import { clientIp, ipAllowed } from "@/lib/integrations/net";
 import { checkRateLimit } from "@/lib/integrations/rate-limit";
 import { validateDeliveryRows } from "@/lib/integrations/validate";
+import { enqueueOrders } from "@/lib/automation/queue";
 
 export const runtime = "nodejs";
 
@@ -85,11 +86,27 @@ export async function POST(request: Request) {
     .single();
 
   const rows = records.map((r) => ({ ...r, org_id: orgId, upload_id: upload?.id ?? null }));
-  const { error: insErr } = await admin.from("delivery_records").insert(rows);
+  const { data: inserted, error: insErr } = await admin
+    .from("delivery_records")
+    .insert(rows)
+    .select("id, route_id, delivery_date");
   if (insErr) {
     await writeAudit({ orgId, sourceSystem: "edi", eventType: type, status: "failure", message: insErr.message, sourceIp: ip });
     return NextResponse.json({ error: "Write failed" }, { status: 500 });
   }
+
+  // Land every order in the queue for the consolidation scheduler.
+  await enqueueOrders(
+    admin,
+    orgId,
+    "edi",
+    (inserted ?? []).map((r, i) => ({
+      recordId: r.id as string,
+      orderNumber: (r.route_id as string) ?? null,
+      dispatchDate: ((r.delivery_date as string) ?? "").slice(0, 10) || null,
+      raw: records[i],
+    })),
+  );
 
   await writeAudit({ orgId, sourceSystem: "edi", eventType: type, status: "success", recordCount: rows.length, message: `Ingested ${rows.length} record(s)`, sourceIp: ip });
   await recordSync(orgId, "edi", rows.length, `Last ${type.toUpperCase()} ingest`);
