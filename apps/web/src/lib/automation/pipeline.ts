@@ -13,6 +13,9 @@ import { buildDispatchPlan, type PlanOrder } from "@/lib/automation/planner";
 import { markQueue } from "@/lib/automation/queue";
 import { writeAudit } from "@/lib/integrations/audit";
 import { recordSync } from "@/lib/integrations/status";
+import { resolveWithCache } from "@/lib/integrations/geometry-cache";
+import { activeProvider, type LatLng } from "@/lib/routing";
+import { pcmilerConfigured, pcmilerMileage } from "@/lib/pcmiler";
 
 export type AutomationResult = {
   orders: number;
@@ -91,10 +94,39 @@ async function run(orgId: string): Promise<AutomationResult> {
     // 3) Consolidate: blind per-wave baseline vs full-day plan.
     const plan = buildDispatchPlan(orders, config);
 
+    // 3b) AUTOMATED ROUTING: resolve real road geometry for every consolidated
+    // truck (PC*MILER commercial routing when keyed, OSRM fallback) and cache
+    // it in route_geometry_cache. With a PC*MILER key, replace the haversine
+    // estimate with commercial truck mileage per route.
+    const depotPt: LatLng = [config.costs.depot.lat, config.costs.depot.lng];
+    const allRoutes = plan.days.flatMap((d) => d.routes);
+    const legs: LatLng[][] = allRoutes.map((r) => [
+      depotPt,
+      ...r.stops.map((s) => [s.lat, s.lng] as LatLng),
+      depotPt,
+    ]);
+    await resolveWithCache(orgId, legs); // caches; map + editor read from here
+    if (pcmilerConfigured()) {
+      for (let i = 0; i < allRoutes.length; i++) {
+        const m = await pcmilerMileage(legs[i]);
+        if (m) allRoutes[i].miles = Math.round(m.miles * 10) / 10;
+      }
+    }
+    await writeAudit({
+      orgId,
+      sourceSystem: "pcmiler",
+      eventType: "auto_routing",
+      direction: "outbound",
+      status: "success",
+      recordCount: allRoutes.length,
+      message: `Routed ${allRoutes.length} consolidated truck(s) via ${activeProvider()}`,
+    });
+
     // 4) Persist the plan.
     const planJson = {
       generatedAt: new Date().toISOString(),
       dates: plan.days.map((d) => d.date),
+      routingProvider: activeProvider(),
       summary: plan.summary,
       queueIds: rows.map((r) => r.id),
       routes: plan.days.flatMap((d) =>
