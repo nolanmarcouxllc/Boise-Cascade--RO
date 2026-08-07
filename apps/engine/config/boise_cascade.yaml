@@ -55,11 +55,28 @@ detection:
                                  # (Hartford, NYC metro) don't chain-link into
                                  # one giant cluster; tune per client.
   min_trucks: 2
-  max_load_lbs: 44000            # legal 53' flatbed payload. A split is only a
-                                 # candidate if FEWER trucks could legally have
-                                 # carried the combined weight — a two-truck
-                                 # split of 74k lbs is correct dispatch, not
-                                 # waste, and is never flagged.
+  # Legality gate = cargo payload from vehicle_constraints below. A split is a
+  # candidate only if FEWER trucks could legally have carried the combined
+  # weight; a two-truck split of 74k lbs is correct dispatch, never flagged.
+  max_load_lbs: 48000            # mirrors vehicle_constraints.max_cargo_payload_lbs
+
+# --- Vehicle constraints (legal limits; per-client, no code changes) ---------
+# Federal limits for the 53-ft flatbed fleet. The consolidation optimizer
+# validates combined loads against max_cargo_payload_lbs; PC*MILER routing uses
+# the dimensions so truck-legal roads and clearances are honored.
+vehicle_constraints:
+  trailer_type: "53-ft flatbed"
+  max_width_inches: 102          # 8.5 ft
+  max_height_inches: 162         # 13'6" (14' allowed in western states; N/A here)
+  trailer_length_min_ft: 48
+  trailer_length_max_ft: 53
+  max_front_overhang_ft: 3
+  max_rear_overhang_ft: 4
+  max_gross_vehicle_weight_lbs: 80000
+  max_cargo_payload_lbs: 48000   # the number the optimizer enforces
+  max_steer_axle_weight_lbs: 12000
+  max_single_axle_weight_lbs: 20000
+  max_tandem_axle_weight_lbs: 34000
 
 # --- Operations assumptions (documentation; engine reads only detection/costs)
 operations:

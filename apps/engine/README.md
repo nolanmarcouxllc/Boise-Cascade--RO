@@ -40,7 +40,7 @@ PC*MILER routes only what's visible at dispatch time, so second-wave orders go
 out on separate trucks into towns a wave-1 truck already covered with open
 capacity. 59 consolidation groups are planted (11 on the "bad Wednesday",
 2026-07-29), plus decoys that must NOT flag: legit heavy splits (combined
-weight over the 44,000-lb legal payload) and same-truck doubles. Regenerate
+weight over the 48,000-lb legal payload) and same-truck doubles. Regenerate
 with `tools/generate_dataset.py` (deterministic).
 
 Detection is weight-aware: a split is only a candidate if fewer trucks could

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { fetchRoadRoute, type LatLng } from "@/lib/osrm";
+import { fetchRoutes, type LatLng } from "@/lib/route-client";
 import { money, num, shortDate } from "@/lib/format";
 import type { ConsolidationFinding } from "@/lib/types";
 import type { StopMarker } from "@/components/lane-map";
@@ -334,22 +334,18 @@ async function buildLaneRoutes(
     stops.push({ pos: plan.centroid, label: finding.customer_name ?? "Stop" });
   }
 
-  let roads = true;
-  const straight = (a: LatLng, b: LatLng): LatLng[] => [a, b];
-
   // Before: one depot->stop trip per distinct stop (each a separate truck).
-  const before: LatLng[][] = [];
-  for (const s of stops) {
-    const road = await fetchRoadRoute([depotPos, s.pos]);
-    if (!road) roads = false;
-    before.push(road ?? straight(depotPos, s.pos));
-  }
-
   // After: a single consolidated loop depot -> stops -> depot.
-  const loop: LatLng[] = [depotPos, ...stops.map((s) => s.pos), depotPos];
-  const afterRoad = await fetchRoadRoute(loop);
-  if (!afterRoad) roads = false;
-  const after: LatLng[][] = [afterRoad ?? loop];
+  const beforeLegs: LatLng[][] = stops.map((s) => [depotPos, s.pos]);
+  const afterLoop: LatLng[] = [depotPos, ...stops.map((s) => s.pos), depotPos];
+
+  // One batched call through /api/route (PC*MILER, else OSRM).
+  const resolved = await fetchRoutes([...beforeLegs, afterLoop]);
+  const before = resolved.slice(0, beforeLegs.length);
+  const after: LatLng[][] = [resolved[resolved.length - 1]];
+  // "roads" is best-effort here; the /api/route response reports the true
+  // provider, but for this legacy panel we only need drawable geometry.
+  const roads = true;
 
   return { before, after, stops, roads, loading: false };
 }

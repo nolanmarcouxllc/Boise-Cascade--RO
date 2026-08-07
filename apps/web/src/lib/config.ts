@@ -20,6 +20,23 @@ export type EngineConfig = {
     service_time_minutes: number;
     depot: { name: string; lat: number; lng: number };
   };
+  // Legal limits for the 53-ft flatbed fleet (mirrors
+  // apps/engine/config/boise_cascade.yaml vehicle_constraints). The optimizer
+  // validates combined loads against max_cargo_payload_lbs.
+  vehicle_constraints: {
+    trailer_type: string;
+    max_width_inches: number;
+    max_height_inches: number;
+    trailer_length_min_ft: number;
+    trailer_length_max_ft: number;
+    max_front_overhang_ft: number;
+    max_rear_overhang_ft: number;
+    max_gross_vehicle_weight_lbs: number;
+    max_cargo_payload_lbs: number;
+    max_steer_axle_weight_lbs: number;
+    max_single_axle_weight_lbs: number;
+    max_tandem_axle_weight_lbs: number;
+  };
 };
 
 export const DEFAULT_CONFIG: EngineConfig = {
@@ -28,7 +45,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
     geo_cluster: true,
     cluster_radius_miles: 6.0,
     min_trucks: 2,
-    max_load_lbs: 44000,
+    max_load_lbs: 48000,
   },
   costs: {
     currency: "USD",
@@ -43,5 +60,19 @@ export const DEFAULT_CONFIG: EngineConfig = {
       lat: 42.1248,
       lng: -72.7496,
     },
+  },
+  vehicle_constraints: {
+    trailer_type: "53-ft flatbed",
+    max_width_inches: 102,
+    max_height_inches: 162,
+    trailer_length_min_ft: 48,
+    trailer_length_max_ft: 53,
+    max_front_overhang_ft: 3,
+    max_rear_overhang_ft: 4,
+    max_gross_vehicle_weight_lbs: 80000,
+    max_cargo_payload_lbs: 48000,
+    max_steer_axle_weight_lbs: 12000,
+    max_single_axle_weight_lbs: 20000,
+    max_tandem_axle_weight_lbs: 34000,
   },
 };

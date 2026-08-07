@@ -10,10 +10,10 @@ same towns. The routing math was fine -- the order picture was incomplete.
 Baked-in patterns per day:
   - 5-6 consolidation candidate groups (>=15% of loads), 11 on the bad
     Wednesday (2026-07-29): same-customer dupes + geo-cluster dupes, all
-    weight-feasible (combined < 44,000 lb legal flatbed payload).
+    weight-feasible (combined < 48,000 lb legal flatbed payload).
   - Wave-1 members intentionally leave with open capacity (<30k lb routes).
   - Decoys the detector must NOT flag: a legit heavy split (two trucks because
-    combined weight > 44k) and a same-truck double (two orders, one truck).
+    combined weight > 48k) and a same-truck double (two orders, one truck).
   - Everything else is clean: one truck per zone per day, all cross-truck
     stops > 6.5 mi apart so no accidental clusters at the 6 mi radius.
 
@@ -32,7 +32,7 @@ ENGINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ENGINE, "data", "boise_cascade_deliveries.csv")
 
 DEPOT = (42.1248, -72.7496)  # 95 Elm Street, Westfield, MA 01085
-MAX_LOAD = 44000
+MAX_LOAD = 48000
 RADIUS_GUARD = 6.5  # generator keeps unrelated cross-truck stops beyond this
 W1, W2 = "06:30", "09:45"
 
