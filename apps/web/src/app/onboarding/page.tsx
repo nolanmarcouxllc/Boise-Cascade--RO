@@ -15,10 +15,10 @@ export default async function OnboardingPage() {
             One more step
           </div>
           <h1 className="text-2xl font-semibold text-ink">
-            Name your organization
+            Name your company
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Everything you upload and analyze is scoped to this organization.
+            Everything you upload and analyze belongs to this company — no one outside it can see your data.
           </p>
         </div>
         <OnboardingForm />

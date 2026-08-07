@@ -41,19 +41,21 @@ export default async function AnalyzePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-ink">Analyze</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Run the consolidation engine over an uploaded dataset.
+        <h1 className="text-2xl font-semibold text-ink">Find wasted trips</h1>
+        <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+          Pick a set of deliveries you&apos;ve uploaded, and this tool will look
+          for orders that went out on separate trucks when one truck could have
+          carried them — then show you what that cost.
         </p>
       </div>
 
       <AnalyzePanel options={options} />
 
       <section>
-        <h2 className="mb-3 text-sm font-medium text-ink-muted">Recent runs</h2>
+        <h2 className="mb-3 text-sm font-medium text-ink-muted">Past checks</h2>
         {runs.length === 0 ? (
           <p className="rounded-xl border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-ink-muted">
-            No runs yet.
+            You haven&apos;t run a check yet.
           </p>
         ) : (
           <div className="panel overflow-hidden">
@@ -61,10 +63,10 @@ export default async function AnalyzePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left text-xs uppercase tracking-wide text-ink-faint">
-                    <th className="px-4 py-3 font-medium">Run</th>
+                    <th className="px-4 py-3 font-medium">When</th>
                     <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 text-right font-medium">Candidates</th>
-                    <th className="px-4 py-3 text-right font-medium">Recoverable</th>
+                    <th className="px-4 py-3 text-right font-medium">Wasted trips found</th>
+                    <th className="px-4 py-3 text-right font-medium">Money wasted</th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -94,7 +96,7 @@ export default async function AnalyzePage() {
                             href={`/dashboard?run=${r.id}`}
                             className="text-sm font-medium text-brand-700 hover:text-brand-600"
                           >
-                            View →
+                            See the results →
                           </Link>
                         )}
                       </td>

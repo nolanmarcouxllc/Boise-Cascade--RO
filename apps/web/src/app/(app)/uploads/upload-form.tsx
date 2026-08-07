@@ -56,13 +56,14 @@ export function UploadForm() {
           disabled={!file || busy}
           className="btn btn-primary"
         >
-          {busy ? "Uploading…" : "Upload & parse"}
+          {busy ? "Uploading…" : "Upload this delivery file"}
         </button>
       </div>
 
       <p className="mt-3 text-xs text-ink-faint">
-        Expected columns: delivery date, customer, address (or lat/lng), truck
-        id, and optionally order size. Header names are matched flexibly.
+        The spreadsheet should have columns for: delivery date, customer name,
+        address, which truck made the delivery, and (if you have it) the load
+        weight. Column names don&apos;t need to match exactly — we figure them out.
       </p>
 
       {error && (
@@ -74,7 +75,7 @@ export function UploadForm() {
       {result && (
         <div className="mt-4 rounded-lg border border-good/30 bg-good/10 px-4 py-3 text-sm text-good">
           <p className="font-medium">
-            Parsed {result.recordCount} delivery record(s).
+            Got it — {result.recordCount} deliveries read from your file.
           </p>
           {result.warnings.length > 0 && (
             <ul className="mt-1 list-inside list-disc text-good/80">
@@ -87,7 +88,7 @@ export function UploadForm() {
             href="/analyze"
             className="mt-2 inline-block font-medium text-good underline underline-offset-2"
           >
-            Run an analysis →
+            Now find the wasted trips in it →
           </Link>
         </div>
       )}

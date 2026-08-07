@@ -67,9 +67,9 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
   if (options.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-ink-muted">
-        Upload a delivery CSV first.{" "}
+        Upload a spreadsheet of your deliveries first.{" "}
         <Link href="/uploads" className="font-medium text-brand-700">
-          Go to uploads →
+          Upload delivery data →
         </Link>
       </div>
     );
@@ -80,7 +80,7 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
       <div className="flex flex-wrap items-end gap-4">
         <label className="block flex-1">
           <span className="mb-1 block text-sm font-medium text-ink-muted">
-            Dataset
+            Which set of deliveries to check
           </span>
           <select
             value={uploadId}
@@ -99,7 +99,9 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
           disabled={phase === "running" || !uploadId}
           className="btn btn-primary px-5"
         >
-          {phase === "running" ? "Analyzing…" : "Run analysis"}
+          {phase === "running"
+            ? "Checking…"
+            : "Find duplicate and overlapping deliveries in this data"}
         </button>
       </div>
 
@@ -107,8 +109,8 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
         <div className="mt-5 flex items-center gap-3 text-sm text-ink-muted">
           <Spinner />
           <span>
-            Detecting split deliveries and quantifying cost
-            {runId ? ` · run ${runId.slice(0, 8)}` : ""}…
+            Looking through every delivery for trucks that doubled up, and
+            adding up what it cost…
           </span>
         </div>
       )}
@@ -124,17 +126,17 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
           <div className="text-sm text-good">
             Done — found{" "}
             <span className="font-semibold">{totals.candidate_groups}</span>{" "}
-            consolidation candidate(s) worth{" "}
+            case(s) where deliveries should have shared a truck, costing you{" "}
             <span className="font-semibold">
               {money(totals.cost_internal)}
-            </span>
-            .
+            </span>{" "}
+            in unnecessary trips.
           </div>
           <Link
             href={runId ? `/dashboard?run=${runId}` : "/dashboard"}
             className="mt-2 inline-block text-sm font-medium text-good underline underline-offset-2"
           >
-            View the full breakdown →
+            See the full story on the map →
           </Link>
         </div>
       )}

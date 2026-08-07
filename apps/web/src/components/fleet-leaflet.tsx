@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { RouteView } from "@/components/fleet-map";
@@ -17,6 +17,17 @@ export function routeColor(r: RouteView): string {
   if (r.hasCandidate) return RED;
   if (r.remainingCapacity > 18000) return AMBER;
   return BLUE;
+}
+
+// Plain-English hover explanation per route type.
+function hoverText(r: RouteView): string {
+  if (r.hasCandidate) {
+    return "This truck made a trip that could have been combined with another truck going to the same area — click to see the full story.";
+  }
+  if (r.remainingCapacity > 18000) {
+    return `Truck ${r.truckId} ran with about ${Math.round(r.remainingCapacity / 1000)},000 lb of room to spare — it could have taken on a nearby delivery. Click for its full day.`;
+  }
+  return "This route ran efficiently — no consolidation needed. Click for its full day.";
 }
 function routeOpacity(r: RouteView): number {
   return Math.max(0.3, Math.min(0.9, 0.3 + 0.6 * (r.totalWeight / 48000)));
@@ -96,7 +107,9 @@ export default function FleetLeaflet({
                 mouseover: () => setHoverKey(r.key),
                 mouseout: () => setHoverKey((k) => (k === r.key ? null : k)),
               }}
-            />
+            >
+              <Tooltip sticky>{hoverText(r)}</Tooltip>
+            </Polyline>
           </Fragment>
         );
       })}
@@ -117,21 +130,27 @@ export default function FleetLeaflet({
               className={s.isCandidate ? "pulse-dot" : undefined}
               eventHandlers={openable ? { click: () => onOpenFinding!(s.id) } : undefined}
             >
+              <Tooltip>
+                {s.customer} — {Math.round(s.weight).toLocaleString()} lb delivered by truck {s.truckId}
+              </Tooltip>
               <Popup>
                 <strong>{s.customer}</strong>
                 <br />
                 {s.address ?? ""}
                 <br />
-                Truck {s.truckId} · {s.window ?? "—"} · {Math.round(s.weight).toLocaleString()} lb
-                {s.orderNumber ? <><br />Order {s.orderNumber}</> : null}
+                Delivered by truck {s.truckId} · sent out at {s.window ?? "—"} ·{" "}
+                {Math.round(s.weight).toLocaleString()} lb of product
+                {s.orderNumber ? <><br />Order number {s.orderNumber}</> : null}
                 {s.isCandidate ? (
                   <>
                     <br />
                     <span style={{ color: RED, fontWeight: 600 }}>
-                      Consolidation candidate ({s.candidateType === "geo_cluster" ? "same area" : "same customer"})
+                      {s.candidateType === "geo_cluster"
+                        ? "A second truck was sent to this same area on the same day."
+                        : "A second truck was sent to this same customer on the same day."}
                     </span>
                     <br />
-                    Click the marker for the full breakdown →
+                    Click the marker for the full story →
                   </>
                 ) : null}
               </Popup>
@@ -141,10 +160,11 @@ export default function FleetLeaflet({
       )}
 
       <Marker position={depotPos} icon={depotIcon}>
+        <Tooltip>{depot.name} — home base</Tooltip>
         <Popup>
           <strong>{depot.name}</strong>
           <br />
-          Distribution yard
+          Home base — every truck starts and ends its day here.
         </Popup>
       </Marker>
 

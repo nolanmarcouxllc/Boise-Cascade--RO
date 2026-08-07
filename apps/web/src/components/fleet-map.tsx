@@ -158,24 +158,26 @@ export function FleetMap({
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Full fleet map</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Every truck route for the period. Red routes pulse where a truck
-            duplicated another&apos;s territory; amber ran with open capacity.
-            Click a route or stop for detail.
+          <h2 className="text-lg font-semibold text-ink">
+            Every delivery your trucks made
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+            This map shows every delivery your trucks made. Red routes are
+            wasted trips that could have been combined with another truck. Click
+            any route to see exactly what happened and what it cost.
           </p>
         </div>
         {data && (
           <div className="flex items-center gap-4 text-sm">
             <div className="text-right">
-              <div className="text-xs uppercase tracking-wide text-ink-faint">Trucks</div>
+              <div className="text-xs text-ink-faint">Trucks used → needed</div>
               <div className="font-semibold text-ink">
                 {data.trucksBefore} <span className="text-ink-faint">→</span>{" "}
                 <span className="text-good">{data.trucksAfter}</span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs uppercase tracking-wide text-ink-faint">Miles</div>
+              <div className="text-xs text-ink-faint">Miles driven → needed</div>
               <div className="font-semibold text-ink">
                 {num(data.milesBefore)} <span className="text-ink-faint">→</span>{" "}
                 <span className="text-good">{num(data.milesAfter)}</span>
@@ -243,10 +245,10 @@ export function FleetMap({
           ))}
         </select>
         <select value={typeF} onChange={(e) => setTypeF(e.target.value as TypeFilter)} className="!w-auto">
-          <option value="all">All route types</option>
-          <option value="candidate">Waste candidates</option>
-          <option value="suboptimal">Open capacity</option>
-          <option value="clean">Clean runs</option>
+          <option value="all">All routes</option>
+          <option value="candidate">Wasted trips only</option>
+          <option value="suboptimal">Trucks with room to spare</option>
+          <option value="clean">Efficient routes only</option>
         </select>
         <label className="flex items-center gap-1.5 text-ink-muted">
           <input
@@ -255,7 +257,7 @@ export function FleetMap({
             onChange={(e) => setCandidatesOnly(e.target.checked)}
             className="!w-auto"
           />
-          Candidates only
+          Show only the wasted trips
         </label>
 
         <div className="ml-auto">
@@ -263,7 +265,9 @@ export function FleetMap({
             onClick={toggleMode}
             className={`btn ${mode === "after" ? "btn-primary" : "btn-ghost"}`}
           >
-            {mode === "before" ? "Show optimized (After)" : "Show actual (Before)"}
+            {mode === "before"
+              ? "See what should have happened instead"
+              : "See what actually happened"}
           </button>
         </div>
       </div>
@@ -294,19 +298,21 @@ export function FleetMap({
         {/* mode badge */}
         <div className="pointer-events-none absolute left-4 top-4 z-[500]">
           <span className={`badge ${mode === "before" ? "badge-crimson" : "badge-green"} shadow-sm`}>
-            {mode === "before" ? "BEFORE — as dispatched" : "AFTER — consolidated"}
+            {mode === "before"
+              ? "What actually happened"
+              : "What should have happened instead"}
           </span>
         </div>
 
         {/* route-color legend — the pattern-recognition key */}
         <div className="pointer-events-none absolute bottom-7 left-4 z-[500] rounded-lg border border-[var(--border)] bg-white/95 px-3 py-2 shadow-sm backdrop-blur">
-          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-            Route type
+          <div className="mb-1.5 text-[11px] font-semibold text-ink-faint">
+            What the colors mean
           </div>
           <div className="space-y-1">
-            <LegendRow color="#e6194b" label="Consolidation waste — duplicated territory" />
-            <LegendRow color="#f58231" label="Open capacity — could absorb a nearby stop" />
-            <LegendRow color="#2563eb" label="Clean, well-loaded run" />
+            <LegendRow color="#e6194b" label="Wasted trip — another truck was already going there" />
+            <LegendRow color="#f58231" label="Truck ran with room to spare" />
+            <LegendRow color="#2563eb" label="Efficient route — nothing to fix" />
           </div>
         </div>
 
@@ -412,12 +418,14 @@ function LanePanel({ route, onClose }: { route: RouteView; onClose: () => void }
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <Metric label="Miles" value={num(route.miles)} />
-        <Metric label="Load" value={`${Math.round(route.totalWeight / 1000)}k`} />
-        <Metric label="Open" value={`${Math.round(route.remainingCapacity / 1000)}k`} />
+        <Metric label="Miles driven" value={num(route.miles)} />
+        <Metric label="Weight on truck" value={`${Math.round(route.totalWeight / 1000)}k lb`} />
+        <Metric label="Room left" value={`${Math.round(route.remainingCapacity / 1000)}k lb`} />
       </div>
 
-      <div className="mt-4 text-xs font-medium uppercase tracking-wide text-ink-faint">Stops in order</div>
+      <div className="mt-4 text-xs font-medium text-ink-faint">
+        Deliveries in the order the truck made them
+      </div>
       <ol className="mt-2 space-y-2">
         {route.stops.map((s, i) => (
           <li key={s.id} className="rounded-lg border border-[var(--border)] bg-surface-2 p-2 text-sm">
@@ -425,7 +433,7 @@ function LanePanel({ route, onClose }: { route: RouteView; onClose: () => void }
               <span className="font-medium text-ink">
                 {i + 1}. {s.customer}
               </span>
-              {s.isCandidate && <span className="badge badge-crimson">candidate</span>}
+              {s.isCandidate && <span className="badge badge-crimson">wasted trip</span>}
             </div>
             <div className="mt-0.5 text-xs text-ink-muted">
               {s.window ?? "—"} · {Math.round(s.weight).toLocaleString()} lb

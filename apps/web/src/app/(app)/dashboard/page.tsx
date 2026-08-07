@@ -71,16 +71,16 @@ export default async function DashboardPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-ink">
-            Consolidation findings
+            Wasted truck trips we found in your deliveries
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Run from {shortDate(run.created_at)} ·{" "}
-            <span className="capitalize">{run.status}</span>
-            {totals ? ` · ${totals.records_analyzed} deliveries analyzed` : ""}
+            We checked {totals ? totals.records_analyzed.toLocaleString() : "your"} deliveries
+            on {shortDate(run.created_at)}, looking for orders that went out on
+            separate trucks when one truck could have carried them.
           </p>
         </div>
         <Link href="/analyze" className="btn btn-ghost">
-          New analysis
+          Check a new set of deliveries
         </Link>
       </div>
 
@@ -132,47 +132,66 @@ function HeroAndBeforeAfter({ totals }: { totals?: RunTotals }) {
           className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-brand-600/15 blur-3xl"
         />
         <div className="text-sm font-medium text-ink-muted">
-          Estimated recoverable cost
+          Money wasted on unnecessary trips
         </div>
         <div className="mt-2 text-4xl font-semibold tracking-tight text-good">
           {money(totals.cost_internal)}
         </div>
+        <p className="mt-1 text-sm text-ink-muted">
+          wasted — money spent sending extra trucks that weren&apos;t needed.
+        </p>
         <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-          Own-fleet cost of{" "}
+          Your trucks made{" "}
           <span className="font-medium text-ink">{totals.redundant_trucks}</span>{" "}
-          redundant truck-trips across{" "}
+          trips that a truck already headed there could have covered, across{" "}
           <span className="font-medium text-ink">{totals.candidate_groups}</span>{" "}
-          consolidation candidates.
+          separate cases.
         </p>
         <div className="mt-4 border-t border-[var(--border)] pt-3 text-xs text-ink-faint">
-          At the 3PL benchmark rate, the same miles run{" "}
-          {money(totals.cost_3pl_benchmark)}.
+          For comparison: paying an outside trucking company to drive those same
+          extra miles would cost {money(totals.cost_3pl_benchmark)}.
         </div>
       </div>
 
       {/* Before / After */}
       <div className="panel p-6 lg:col-span-2">
-        <div className="mb-4 text-sm font-medium text-ink-muted">
-          Before → After (consolidated)
+        <div className="text-sm font-medium text-ink-muted">
+          What happened → what combining the trips would look like
         </div>
+        <p className="mb-4 mt-0.5 text-xs text-ink-faint">
+          Left number: how things actually ran. Right number (green): how they
+          would run if overlapping deliveries shared a truck.
+        </p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Delta
-            label="Truck visits"
+            label="Truck trips to these places"
+            hint="separate trucks sent to the flagged locations"
             before={totals.truck_visits_before}
             after={totals.truck_visits_after}
           />
-          <Delta label="Redundant trips" before={totals.redundant_trucks} after={0} />
-          <Delta label="Wasted miles" before={num(totals.wasted_miles)} after={0} />
           <Delta
-            label="Wasted fleet-hrs"
+            label="Unnecessary trips"
+            hint="trips another truck could have covered"
+            before={totals.redundant_trucks}
+            after={0}
+          />
+          <Delta
+            label="Extra miles driven"
+            hint="road miles those unnecessary trips added"
+            before={num(totals.wasted_miles)}
+            after={0}
+          />
+          <Delta
+            label="Extra driver hours"
+            hint="paid time spent on those trips"
             before={num(totals.wasted_fleet_hours)}
             after={0}
           />
         </div>
         {totals.records_skipped_no_coords > 0 && (
           <p className="mt-4 text-xs text-ink-faint">
-            {totals.records_skipped_no_coords} record(s) skipped for missing
-            coordinates, date, or truck id.
+            {totals.records_skipped_no_coords} delivery record(s) couldn&apos;t be
+            checked because they were missing an address location, date, or truck.
           </p>
         )}
       </div>
@@ -182,23 +201,24 @@ function HeroAndBeforeAfter({ totals }: { totals?: RunTotals }) {
 
 function Delta({
   label,
+  hint,
   before,
   after,
 }: {
   label: string;
+  hint?: string;
   before: number | string;
   after: number | string;
 }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-surface-2 p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-        {label}
-      </div>
+      <div className="text-xs font-medium text-ink-muted">{label}</div>
       <div className="mt-2 flex items-baseline gap-2">
         <span className="text-xl font-semibold text-ink">{before}</span>
         <span className="text-ink-faint">→</span>
         <span className="text-xl font-semibold text-good">{after}</span>
       </div>
+      {hint && <div className="mt-1 text-[11px] leading-tight text-ink-faint">{hint}</div>}
     </div>
   );
 }
@@ -207,8 +227,8 @@ function FindingsTable({ findings }: { findings: ConsolidationFinding[] }) {
   if (findings.length === 0) {
     return (
       <div className="panel p-8 text-center text-sm text-ink-muted">
-        No consolidation candidates in this run — every delivery rode a single
-        truck.
+        Good news — no wasted trips found. Every delivery in this data went out
+        on the right truck.
       </div>
     );
   }
@@ -277,17 +297,17 @@ function TypeBadge({ type }: { type?: string }) {
 function EmptyState() {
   return (
     <div className="panel mx-auto max-w-lg p-10 text-center">
-      <h1 className="text-lg font-semibold text-ink">No analysis yet</h1>
+      <h1 className="text-lg font-semibold text-ink">Nothing to show yet</h1>
       <p className="mt-2 text-sm text-ink-muted">
-        Upload a delivery CSV, then run an analysis to see where trucks doubled
-        up and what it cost.
+        Upload a spreadsheet of your deliveries, then run a check to see where
+        trucks doubled up and what it cost you.
       </p>
       <div className="mt-6 flex justify-center gap-3">
         <Link href="/uploads" className="btn btn-primary">
-          Upload a CSV
+          Upload your delivery data
         </Link>
         <Link href="/analyze" className="btn btn-ghost">
-          Analyze
+          Find duplicate deliveries
         </Link>
       </div>
     </div>

@@ -43,9 +43,15 @@ export function FindingsPanel({
 
   return (
     <section className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold text-ink">Consolidation findings</h2>
-        <p className="text-xs text-ink-muted">Click any row for the full breakdown →</p>
+      <div>
+        <h2 className="text-lg font-semibold text-ink">
+          Deliveries that should have shared a truck
+        </h2>
+        <p className="mt-1 max-w-3xl text-sm text-ink-muted">
+          These are the deliveries that should have been combined into one truck
+          but weren&apos;t. Each row shows you the problem, the cost, and the
+          fix — click any row for the full story.
+        </p>
       </div>
 
       <div className="panel overflow-hidden">
@@ -54,12 +60,12 @@ export function FindingsPanel({
             <thead>
               <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left text-xs uppercase tracking-wide text-ink-faint">
                 <th className="px-4 py-3 font-medium">#</th>
-                <SortableTh label="Customer / cluster" active={sort === "customer"} dir={dir} onClick={() => toggleSort("customer")} />
-                <SortableTh label="Date" active={sort === "date"} dir={dir} onClick={() => toggleSort("date")} />
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 text-right font-medium">Trucks → fix</th>
-                <SortableTh label="Wasted mi" active={sort === "miles"} dir={dir} onClick={() => toggleSort("miles")} right />
-                <SortableTh label="Recoverable" active={sort === "cost"} dir={dir} onClick={() => toggleSort("cost")} right />
+                <SortableTh label="Who got the deliveries" active={sort === "customer"} dir={dir} onClick={() => toggleSort("customer")} />
+                <SortableTh label="When" active={sort === "date"} dir={dir} onClick={() => toggleSort("date")} />
+                <th className="px-4 py-3 font-medium">What went wrong</th>
+                <th className="px-4 py-3 text-right font-medium">Trucks sent → needed</th>
+                <SortableTh label="Extra miles" active={sort === "miles"} dir={dir} onClick={() => toggleSort("miles")} right />
+                <SortableTh label="Money wasted" active={sort === "cost"} dir={dir} onClick={() => toggleSort("cost")} right />
                 <th className="px-2 py-3"></th>
               </tr>
             </thead>
@@ -77,7 +83,9 @@ export function FindingsPanel({
                     <td className="px-4 py-3 text-ink-muted">{shortDate(f.date)}</td>
                     <td className="px-4 py-3">
                       <span className={`badge ${f.consolidated_plan_json?.type === "geo_cluster" ? "badge-orange" : "badge-green"}`}>
-                        {f.consolidated_plan_json?.type === "geo_cluster" ? "geo" : "same cust"}
+                        {f.consolidated_plan_json?.type === "geo_cluster"
+                          ? "two trucks, same area"
+                          : "two trucks, same customer"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-ink-muted">
@@ -97,7 +105,7 @@ export function FindingsPanel({
         {findings.length > 10 && (
           <div className="border-t border-[var(--border)] p-3 text-center">
             <button onClick={() => setShowAll((v) => !v)} className="text-sm font-medium text-brand-700 hover:text-brand-600">
-              {showAll ? "Show top 10" : `Show all ${findings.length} findings`}
+              {showAll ? "Show just the 10 most expensive" : `Show all ${findings.length} wasted trips`}
             </button>
           </div>
         )}

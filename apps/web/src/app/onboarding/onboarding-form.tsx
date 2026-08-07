@@ -20,7 +20,7 @@ export function OnboardingForm() {
         body: JSON.stringify({ name }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body?.error ?? "Could not create organization.");
+      if (!res.ok) throw new Error(body?.error ?? "Could not create your company.");
       router.replace("/dashboard");
       router.refresh();
     } catch (err) {
@@ -33,7 +33,7 @@ export function OnboardingForm() {
     <form onSubmit={submit} className="panel space-y-4 p-6">
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-ink-muted">
-          Organization name
+          Company name
         </span>
         <input
           value={name}
@@ -48,7 +48,7 @@ export function OnboardingForm() {
         </p>
       )}
       <button type="submit" disabled={busy} className="btn btn-primary w-full">
-        {busy ? "Creating…" : "Create organization"}
+        {busy ? "Creating…" : "Create company"}
       </button>
     </form>
   );

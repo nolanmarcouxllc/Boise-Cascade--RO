@@ -25,7 +25,13 @@ export type SystemStatus = {
 function envConfigured(system: SystemKey): { configured: boolean; live: boolean; detail: string } {
   if (system === "pcmiler") {
     const c = !!process.env.PCMILER_API_KEY;
-    return { configured: c, live: c, detail: c ? "API key present" : "No API key — using OSRM fallback" };
+    return {
+      configured: c,
+      live: c,
+      detail: c
+        ? "Connected with your access key."
+        : "Waiting for your access key — maps still work using a free public routing service in the meantime.",
+    };
   }
   if (system === "dmsi") {
     const c = !!process.env.DMSI_API_KEY && !!process.env.DMSI_BASE_URL;
@@ -34,21 +40,34 @@ function envConfigured(system: SystemKey): { configured: boolean; live: boolean;
       configured: c,
       live,
       detail: !c
-        ? "No API key/URL — calls mocked + logged"
+        ? "Waiting for your access key — running in practice mode until it's connected."
         : live
-          ? "Live mode — writes hit production DMSi"
-          : "Simulation mode — payloads logged, not sent",
+          ? "LIVE — plans sent from here go straight to your real dispatch queue."
+          : "Practice mode — plans are saved for review; nothing touches your live system.",
     };
   }
   // edi
   const c = !!process.env.EDI_SHARED_SECRET;
-  return { configured: c, live: c, detail: c ? "Shared secret set — HMAC enforced" : "No shared secret — webhook rejects all" };
+  return {
+    configured: c,
+    live: c,
+    detail: c
+      ? "Security key is set — only verified senders are accepted."
+      : "Waiting for the shared security key — all incoming documents are rejected until it's set.",
+  };
 }
 
 const LABELS: Record<SystemKey, string> = {
-  dmsi: "DMSi Agility API",
-  pcmiler: "PC*MILER API",
-  edi: "EDI Webhook (Kleinschmidt)",
+  dmsi: "DMSi Agility",
+  pcmiler: "PC*MILER",
+  edi: "Automatic Order Feed (EDI)",
+};
+
+// One-sentence plain-English description of what each system is.
+export const SYSTEM_DESCRIPTIONS: Record<SystemKey, string> = {
+  dmsi: "Your order management system — where all customer orders are entered and tracked.",
+  pcmiler: "Your routing system — calculates the best road routes for your trucks.",
+  edi: "A direct data line from trading partners — order documents arrive here automatically, no typing.",
 };
 
 export async function getIntegrationStatus(orgId: string): Promise<SystemStatus[]> {

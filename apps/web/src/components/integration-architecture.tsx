@@ -1,7 +1,7 @@
 // Integration architecture — the one-page explainer Steve shows IT when asking
 // them to grant DMSi + PC*MILER API access. Static, self-contained.
 
-const STEPS = ["Normalize", "Validate", "Consolidate", "Sequence"];
+const STEPS = ["Clean up", "Check", "Combine", "Put in order"];
 
 export function IntegrationArchitecture() {
   return (
@@ -10,11 +10,13 @@ export function IntegrationArchitecture() {
         <div className="text-xs font-semibold uppercase tracking-wide text-brand-700">
           Architecture
         </div>
-        <h2 className="mt-1 text-lg font-semibold text-ink">Where this tool sits in your stack</h2>
+        <h2 className="mt-1 text-lg font-semibold text-ink">
+          Where this tool sits between your systems
+        </h2>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-          A diagnostic layer between order management and dispatch. It does not
-          replace DMSi or PC*MILER — it reconciles the day&apos;s full order
-          picture before routes are built.
+          The bridge between your order system and your routing system — it
+          makes sure orders are grouped efficiently before routes are built. It
+          does not replace DMSi or PC*MILER.
         </p>
       </div>
 
@@ -22,13 +24,13 @@ export function IntegrationArchitecture() {
       <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
         <SystemNode
           title="DMSi Agility"
-          sub="ERP · Order Management"
+          sub="Your order system"
           tone="neutral"
         />
-        <Flow label="orders + dispatch waves" />
+        <Flow label="orders come in" />
         <div className="flex-[1.4] rounded-xl border-2 border-brand-600/40 bg-brand-50 p-4">
           <div className="text-center text-sm font-semibold text-brand-700">
-            Route Consolidation Engine
+            This tool
           </div>
           <div className="mt-3 flex items-center justify-center gap-1.5">
             {STEPS.map((s, i) => (
@@ -41,10 +43,10 @@ export function IntegrationArchitecture() {
             ))}
           </div>
         </div>
-        <Flow label="1 consolidated load / truck" />
+        <Flow label="one combined load per truck" />
         <SystemNode
           title="PC*MILER"
-          sub="Commercial Vehicle Routing"
+          sub="Your routing system"
           tone="neutral"
         />
       </div>
@@ -52,36 +54,36 @@ export function IntegrationArchitecture() {
       {/* Three explainer columns */}
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <ExplainerCard
-          heading="What DMSi provides"
+          heading="What DMSi sends us"
           accent="text-ink"
           items={[
-            "Order number & customer",
-            "Ship-to address",
-            "Product & weight",
-            "Requested delivery window",
-            "Dispatch wave / release time",
+            "Order number and customer name",
+            "Delivery address",
+            "What's being shipped and how much it weighs",
+            "When the customer wants it",
+            "What time the order was released to dispatch",
           ]}
         />
         <ExplainerCard
-          heading="What we do in the middle"
+          heading="What this tool does in the middle"
           accent="text-brand-700"
           items={[
-            "Normalize to one standard schema",
-            "Validate & sanitize every field",
-            "Consolidate same-day loads onto the fewest legal trucks",
-            "Verify ≤ 48,000 lb payload per truck",
-            "Sequence stops (nearest-neighbor)",
+            "Puts every order into one consistent format",
+            "Checks every field for errors before using it",
+            "Groups same-day orders onto the fewest trucks possible",
+            "Makes sure no truck is loaded past the 48,000 lb legal limit",
+            "Puts each truck's stops in the shortest driving order",
           ]}
         />
         <ExplainerCard
-          heading="What PC*MILER receives"
+          heading="What PC*MILER gets back"
           accent="text-ink"
           items={[
-            "One consolidated load per truck",
-            "Stops in optimized sequence",
-            "Legal, weight-verified payloads",
-            "53-ft flatbed vehicle profile",
-            "Ready to route — no rework",
+            "One clean, combined load per truck",
+            "Stops already in the best order",
+            "Every load checked against the legal weight limit",
+            "Truck size and type included, so routes avoid restricted roads",
+            "Ready to route — no rework needed",
           ]}
         />
       </div>

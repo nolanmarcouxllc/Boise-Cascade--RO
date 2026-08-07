@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/uploads", label: "Uploads" },
-  { href: "/analyze", label: "Analyze" },
-  { href: "/integrations", label: "Integrations" },
+  { href: "/uploads", label: "Upload data" },
+  { href: "/analyze", label: "Find wasted trips" },
+  { href: "/integrations", label: "Connected systems" },
 ];
 
 export function Nav() {

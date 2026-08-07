@@ -86,7 +86,9 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
   async function sendToDmsi() {
     if (!detail) return;
     const ok = window.confirm(
-      "Send this consolidated plan to DMSi dispatch?\n\nSimulation mode logs the exact payload without touching production. Set DMSI_LIVE_MODE=true to send for real.",
+      "Send this combined delivery plan to your dispatch system (DMSi)?\n\n" +
+        "Right now this runs in practice mode: nothing touches your live dispatch " +
+        "system — the exact plan is saved so it can be reviewed first.",
     );
     if (!ok) return;
     setSending(true);
@@ -99,7 +101,11 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error ?? "Send failed");
-      setSendResult(`${body.mode === "live" ? "Sent to DMSi" : "Simulated"} — ${body.message}`);
+      setSendResult(
+        body.mode === "live"
+          ? "Sent to your dispatch system."
+          : "Practice run complete — the plan was saved for review; nothing was sent to your live dispatch system.",
+      );
     } catch (e) {
       setSendResult(e instanceof Error ? e.message : "Send failed");
     } finally {
@@ -131,8 +137,11 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
             <div className="space-y-6">
               <div>
                 <p className="text-sm text-ink-muted">
-                  {shortDate(detail.date)} · {detail.type === "geo_cluster" ? "geo cluster" : "same customer"} ·{" "}
-                  {detail.distinctTrucks} trucks deployed
+                  {shortDate(detail.date)} ·{" "}
+                  {detail.type === "geo_cluster"
+                    ? "two trucks sent to the same area"
+                    : "multiple trucks sent to the same customer"}{" "}
+                  · {detail.distinctTrucks} trucks were used
                 </p>
                 {/* one-line verdict */}
                 <div className="mt-2 rounded-lg border border-good/30 bg-good/10 p-3 text-sm font-medium text-good">
@@ -144,13 +153,15 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                 <p className="text-sm leading-relaxed text-ink-muted">{whyText(detail)}</p>
               </Section>
 
-              <Section title="What was on each truck">
+              <Section title="What was on each truck that day">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {detail.manifest.map((m, i) => (
                     <div key={m.truckId} className="rounded-lg border border-[var(--border)] bg-surface-2 p-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold" style={{ color: TRUCK_COLORS[i % TRUCK_COLORS.length] }}>Truck {m.truckId}</span>
-                        <span className="text-xs text-ink-faint">{Math.round(m.remainingCapacityLbs / 1000)}k open</span>
+                        <span className="text-xs text-ink-faint">
+                          {Math.round(m.remainingCapacityLbs / 1000)}k lb of room left
+                        </span>
                       </div>
                       <ul className="mt-2 space-y-1.5 text-xs text-ink-muted">
                         {m.stops.map((s, j) => (
@@ -172,24 +183,29 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                   ))}
                 </div>
                 <p className="mt-3 text-sm">
-                  Combined group load <span className="font-semibold text-ink">{detail.combinedGroupWeightLbs.toLocaleString()} lb</span> vs{" "}
-                  {detail.maxLoadLbs.toLocaleString()} lb legal —{" "}
+                  All of these orders together weigh{" "}
+                  <span className="font-semibold text-ink">{detail.combinedGroupWeightLbs.toLocaleString()} lb</span>.
+                  A truck can legally carry {detail.maxLoadLbs.toLocaleString()} lb —{" "}
                   <span className={`badge ${detail.legal ? "badge-green" : "badge-crimson"}`}>
-                    {detail.legal ? "fits one truck legally" : "requires split (legal)"}
+                    {detail.legal
+                      ? "so one truck could have carried it all, legally"
+                      : "so splitting across trucks was the right call"}
                   </span>
                 </p>
               </Section>
 
               {detail.billOfLading.length > 0 && (
-                <Section title="Consolidated bill of lading">
+                <Section
+                  title="Bill of Lading — the full list of what was on these trucks"
+                >
                   <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left uppercase tracking-wide text-ink-faint">
-                          <th className="px-2 py-2 font-medium">Order</th>
-                          <th className="px-2 py-2 font-medium">Product</th>
-                          <th className="px-2 py-2 text-right font-medium">Qty</th>
-                          <th className="px-2 py-2 text-right font-medium">Board ft</th>
+                          <th className="px-2 py-2 font-medium">Order number</th>
+                          <th className="px-2 py-2 font-medium">What was shipped</th>
+                          <th className="px-2 py-2 text-right font-medium">How much</th>
+                          <th className="px-2 py-2 text-right font-medium">Board feet</th>
                           <th className="px-2 py-2 text-right font-medium">Weight</th>
                         </tr>
                       </thead>
@@ -199,7 +215,10 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                             <td className="px-2 py-2 font-mono text-ink-muted">{li.order_number}</td>
                             <td className="px-2 py-2 text-ink">
                               {li.product ?? "—"}
-                              <span className="block text-ink-faint">{li.customer}</span>
+                              {productPlain(li.product) && (
+                                <span className="text-ink-faint"> ({productPlain(li.product)})</span>
+                              )}
+                              <span className="block text-ink-faint">for {li.customer}</span>
                             </td>
                             <td className="px-2 py-2 text-right tabular-nums text-ink-muted">
                               {li.quantity?.toLocaleString() ?? "—"} {li.unit ?? ""}
@@ -214,7 +233,7 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                         ))}
                         <tr className="bg-black/[0.02] font-semibold text-ink">
                           <td className="px-2 py-2" colSpan={4}>
-                            Consolidated load · {detail.billOfLading.length} orders
+                            Everything combined · {detail.billOfLading.length} orders on one truck
                           </td>
                           <td className="px-2 py-2 text-right tabular-nums">
                             {detail.combinedGroupWeightLbs.toLocaleString()} lb
@@ -226,10 +245,12 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                 </Section>
               )}
 
-              <Section title="Before → after routes">
+              <Section title="The routes on a map — what happened vs. the fix">
                 <div className="space-y-3">
                   <div>
-                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-alert">Before — every truck&apos;s full day</div>
+                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-alert">
+                      What actually happened — each truck&apos;s full day, one color per truck
+                    </div>
                     <DrawerMap
                       depot={detail.depot}
                       routes={detail.before.map((b, i) => ({ geometry: b.geometry, color: TRUCK_COLORS[i % TRUCK_COLORS.length] }))}
@@ -237,7 +258,9 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                     />
                   </div>
                   <div>
-                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-good">After — one consolidated truck</div>
+                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-good">
+                      What should have happened — one truck covering all the stops
+                    </div>
                     <DrawerMap
                       depot={detail.depot}
                       routes={[{ geometry: detail.after.geometry, color: GOOD }]}
@@ -247,20 +270,45 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                 </div>
               </Section>
 
-              <Section title="The numbers">
+              <Section title="What this cost you">
                 <div className="grid grid-cols-2 gap-3">
-                  <Num label="Wasted miles" value={num(detail.numbers.wastedMiles)} hint={detail.numbers.milesContext} />
-                  <Num label="Wasted fleet-hrs" value={num(detail.numbers.wastedHours)} hint="at 45 mph + 45 min/stop" />
-                  <Num label="Recoverable" value={money(detail.numbers.recoverable)} accent hint="own-fleet cost of the redundant trips" />
-                  <Num label="At 3PL rate" value={money(detail.numbers.cost3pl)} hint="northeast flatbed benchmark" />
-                  <Num label="Load factor before" value={`${detail.numbers.loadFactorBefore}%`} hint={`${detail.distinctTrucks} trucks`} />
-                  <Num label="Load factor after" value={`${detail.numbers.loadFactorAfter}%`} hint={`${detail.minTrucksNeeded} truck`} />
+                  <Num
+                    label="Extra miles driven"
+                    value={num(detail.numbers.wastedMiles)}
+                    hint={detail.numbers.milesContext}
+                  />
+                  <Num
+                    label="Extra driver hours paid"
+                    value={num(detail.numbers.wastedHours)}
+                    hint="time behind the wheel plus loading and unloading"
+                  />
+                  <Num
+                    label="Money wasted"
+                    value={money(detail.numbers.recoverable)}
+                    accent
+                    hint="what the unnecessary trips cost in fuel, wear, and driver pay"
+                  />
+                  <Num
+                    label="Outside carrier comparison"
+                    value={money(detail.numbers.cost3pl)}
+                    hint="what a hired trucking company would charge for those same miles"
+                  />
+                  <Num
+                    label="How full the trucks were"
+                    value={`${detail.numbers.loadFactorBefore}%`}
+                    hint={`spread across ${detail.distinctTrucks} trucks`}
+                  />
+                  <Num
+                    label="How full after combining"
+                    value={`${detail.numbers.loadFactorAfter}%`}
+                    hint={`on ${detail.minTrucksNeeded} truck${detail.minTrucksNeeded > 1 ? "s" : ""}`}
+                  />
                 </div>
               </Section>
 
               <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-4">
                 <button onClick={sendToDmsi} disabled={sending} className="btn btn-primary">
-                  {sending ? "Sending…" : "Send to DMSi dispatch"}
+                  {sending ? "Sending…" : "Send this combined plan to your dispatch system (DMSi)"}
                 </button>
                 {sendResult && <span className="text-sm text-ink-muted">{sendResult}</span>}
               </div>
@@ -273,19 +321,42 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
 }
 
 function verdict(d: Detail): string {
-  const s = d.distinctTrucks - d.minTrucksNeeded;
-  if (d.legal) {
-    return `✓ One truck legally carries all ${d.combinedGroupWeightLbs.toLocaleString()} lb — consolidating ${d.distinctTrucks} → ${d.minTrucksNeeded} truck recovers ${money(d.numbers.recoverable)}.`;
+  const extraTrips = d.distinctTrucks - d.minTrucksNeeded;
+  const tripWord = extraTrips === 1 ? "trip" : "trips";
+  if (d.minTrucksNeeded === 1) {
+    return `✓ One truck could have legally carried all of these orders — combining them would have saved ${money(d.numbers.recoverable)} and eliminated ${extraTrips} unnecessary ${tripWord}.`;
   }
-  return `✓ ${d.minTrucksNeeded} trucks legally carry the ${d.combinedGroupWeightLbs.toLocaleString()} lb — ${s} of the ${d.distinctTrucks} dispatched were redundant, recovering ${money(d.numbers.recoverable)}.`;
+  return `✓ ${d.minTrucksNeeded} trucks could have legally carried all of these orders — combining them would have saved ${money(d.numbers.recoverable)} and eliminated ${extraTrips} unnecessary ${tripWord}.`;
 }
 
 function whyText(d: Detail): string {
   const parts = d.waves.map((w) => `${w.count} order(s) at ${w.window}`).join(", then ");
   if (d.type === "geo_cluster") {
-    return `DMSi released ${parts} to customers in the same area. Dispatch built the ${d.waves[0]?.window ?? "first"} routes blind to the later release, so a second truck went to the same neighborhood a wave-1 truck could have covered with open capacity.`;
+    return `Your order system released ${parts} for customers in the same area. The routes for the ${d.waves[0]?.window ?? "first"} wave were already built before the later orders came through — so a second truck drove to a neighborhood the first truck could have covered with the room it had left.`;
   }
-  return `DMSi released ${parts} to ${d.customer}. Dispatch built the ${d.waves[0]?.window ?? "first"} routes before the later orders released, so ${d.distinctTrucks} separate trucks were sent to the same customer when ${d.minTrucksNeeded} could have carried the combined ${d.combinedGroupWeightLbs.toLocaleString()} lb legally.`;
+  return `Your order system released ${parts} for ${d.customer}. The routes for the ${d.waves[0]?.window ?? "first"} wave were already built before the later orders came through — so ${d.distinctTrucks} separate trucks were sent to the same customer when ${d.minTrucksNeeded} could have legally carried the combined ${d.combinedGroupWeightLbs.toLocaleString()} lb.`;
+}
+
+// Plain-English expansions for building-products jargon, shown the first time
+// a product appears.
+const PRODUCT_PLAIN: [RegExp, string][] = [
+  [/^LVL/i, "laminated veneer lumber — engineered beams"],
+  [/^OSB/i, "oriented strand board — wall and roof panels"],
+  [/plywood/i, "construction-grade plywood sheets"],
+  [/I-Joist/i, "engineered floor joists"],
+  [/Dimensional Lumber/i, "standard framing lumber"],
+  [/Hardie/i, "fiber cement siding"],
+  [/Vinyl Siding/i, "vinyl house siding"],
+  [/Decking/i, "composite deck boards"],
+  [/Millwork|Trim/i, "interior trim and molding"],
+];
+
+function productPlain(name: string | null): string | null {
+  if (!name) return null;
+  for (const [re, plain] of PRODUCT_PLAIN) {
+    if (re.test(name)) return plain;
+  }
+  return null;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

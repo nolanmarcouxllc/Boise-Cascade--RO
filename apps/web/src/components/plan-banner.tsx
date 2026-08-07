@@ -30,19 +30,20 @@ export function PlanBanner({ data, onReview }: { data: PlanBannerData; onReview?
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-good/40 bg-good/10 px-4 py-3">
       <span className="inline-block h-2.5 w-2.5 flex-shrink-0 animate-pulse rounded-full bg-good" />
       <p className="flex-1 text-sm text-ink">
-        <span className="font-semibold">New optimized dispatch plan ready</span> —{" "}
-        {data.loads} loads, {data.trucks} trucks (blind dispatch would use {data.trucksBefore}),{" "}
-        <span className="font-semibold text-good">{money(data.recoverable)}</span> recoverable.
+        <span className="font-semibold">A new combined delivery plan is ready</span> — the
+        system grouped {data.loads} deliveries onto {data.trucks} trucks instead of the{" "}
+        {data.trucksBefore} that would have gone out, saving about{" "}
+        <span className="font-semibold text-good">{money(data.recoverable)}</span>.
         {pushed && (
           <span className="text-ink-muted">
-            {" "}Pushed to DMSi at {pushed}
-            {data.pushMode === "simulation" ? " (simulation)" : ""}.
+            {" "}Sent to your dispatch team at {pushed}
+            {data.pushMode === "simulation" ? " (practice mode — not live yet)" : ""}.
           </span>
         )}
       </p>
       {onReview && (
         <button onClick={onReview} className="btn btn-primary !py-1.5 text-xs">
-          Review &amp; edit plan
+          Review or change this plan
         </button>
       )}
       <button

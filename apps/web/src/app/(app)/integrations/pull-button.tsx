@@ -21,8 +21,8 @@ export function DmsiPullButton() {
       if (!res.ok) throw new Error(body?.error ?? "Pull failed");
       setMsg(
         body.mocked
-          ? "Mocked — DMSi not configured yet (wiring verified)"
-          : `Pulled ${body.records} order(s)`,
+          ? "DMSi isn't connected yet — once it is, this button pulls the day's orders in."
+          : `Imported ${body.records} order(s).`,
       );
       router.refresh();
     } catch (e) {
@@ -35,7 +35,7 @@ export function DmsiPullButton() {
   return (
     <div className="mt-4">
       <button onClick={pull} disabled={busy} className="btn btn-ghost w-full text-xs">
-        {busy ? "Pulling…" : "Pull today's orders"}
+        {busy ? "Importing…" : "Import today's orders from DMSi"}
       </button>
       {msg && <p className="mt-2 text-xs text-ink-muted">{msg}</p>}
     </div>

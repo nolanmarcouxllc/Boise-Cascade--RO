@@ -26,10 +26,11 @@ export default async function UploadsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-ink">Uploads</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Upload a delivery CSV. It's stored privately and parsed into delivery
-          records for analysis.
+        <h1 className="text-2xl font-semibold text-ink">Upload your delivery data</h1>
+        <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+          Upload a spreadsheet of past deliveries (a CSV file — most systems can
+          export one). It&apos;s stored privately, and each row becomes a
+          delivery this tool can check for wasted trips.
         </p>
       </div>
 
@@ -37,11 +38,11 @@ export default async function UploadsPage() {
 
       <section>
         <h2 className="mb-3 text-sm font-medium text-ink-muted">
-          Recent uploads
+          Files you&apos;ve uploaded
         </h2>
         {uploads.length === 0 ? (
           <p className="rounded-xl border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-ink-muted">
-            Nothing uploaded yet.
+            No files uploaded yet.
           </p>
         ) : (
           <div className="panel overflow-hidden">
@@ -49,10 +50,10 @@ export default async function UploadsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left text-xs uppercase tracking-wide text-ink-faint">
-                    <th className="px-4 py-3 font-medium">File</th>
-                    <th className="px-4 py-3 font-medium">Uploaded</th>
+                    <th className="px-4 py-3 font-medium">File name</th>
+                    <th className="px-4 py-3 font-medium">When uploaded</th>
                     <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 text-right font-medium">Records</th>
+                    <th className="px-4 py-3 text-right font-medium">Deliveries in it</th>
                   </tr>
                 </thead>
                 <tbody>

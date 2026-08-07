@@ -121,7 +121,9 @@ export function PlanEditor({ planId, onClose }: { planId: string; onClose: () =>
       let out = `Saved (${body.changes}).`;
       if (thenPush) {
         const ok = window.confirm(
-          "Re-push this plan to DMSi dispatch?\n\nSimulation mode logs the exact payload without touching production.",
+          "Send the updated plan to your dispatch system (DMSi)?\n\n" +
+            "Right now this runs in practice mode: nothing touches your live " +
+            "dispatch system — the exact plan is saved so it can be reviewed first.",
         );
         if (ok) {
           const pres = await fetch(`/api/plans/${planId}/push`, { method: "POST" });
@@ -142,10 +144,13 @@ export function PlanEditor({ planId, onClose }: { planId: string; onClose: () =>
     <Overlay onClose={onClose}>
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-ink">Dispatch plan — manual override</h3>
+          <h3 className="text-lg font-semibold text-ink">
+            Review this delivery plan — you have the final say
+          </h3>
           <p className="text-sm text-ink-muted">
-            Drag stops between trucks (or use the controls), then save and
-            re-push. Every change is audited.
+            Drag any delivery from one truck to another (or use the arrows and
+            menus), remove one entirely, then save. Every change is recorded
+            with your name.
           </p>
         </div>
         <button onClick={onClose} className="text-ink-faint hover:text-ink" aria-label="Close">✕</button>
@@ -169,7 +174,8 @@ export function PlanEditor({ planId, onClose }: { planId: string; onClose: () =>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-ink">Truck {r.truckId}</span>
                 <span className={`text-xs tabular-nums ${over ? "font-semibold text-alert" : "text-ink-muted"}`}>
-                  {w.toLocaleString()} / {cap.toLocaleString()} lb{over ? " — OVER LEGAL LIMIT" : ""}
+                  {w.toLocaleString()} lb of {cap.toLocaleString()} lb allowed
+                  {over ? " — TOO HEAVY TO DRIVE LEGALLY" : ""}
                 </span>
               </div>
               <ol className="mt-2 space-y-1.5">
@@ -204,7 +210,12 @@ export function PlanEditor({ planId, onClose }: { planId: string; onClose: () =>
                     <button onClick={() => removeStop(s.recordId)} className="text-alert/70 hover:text-alert" title="Remove from plan">✕</button>
                   </li>
                 ))}
-                {r.stops.length === 0 && <li className="text-xs text-ink-faint">Empty — drop a stop here or it will be dropped from the push.</li>}
+                {r.stops.length === 0 && (
+                  <li className="text-xs text-ink-faint">
+                    This truck is empty — drag a delivery here, or it will be left
+                    out of the plan.
+                  </li>
+                )}
               </ol>
             </div>
           );
@@ -214,7 +225,8 @@ export function PlanEditor({ planId, onClose }: { planId: string; onClose: () =>
       {removed.length > 0 && (
         <div className="mt-3 rounded-lg border border-dashed border-[var(--border-strong)] p-3">
           <div className="text-xs font-medium text-ink-muted">
-            Removed from plan ({removed.length}) — drag back onto a truck to restore; otherwise they stay out of the DMSi push.
+            Deliveries you removed ({removed.length}) — drag one back onto a truck
+            to restore it; anything left here stays out of the plan you send.
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             {removed.map((s) => (
@@ -233,12 +245,17 @@ export function PlanEditor({ planId, onClose }: { planId: string; onClose: () =>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-4">
         <button onClick={() => save(false)} disabled={busy || anyOverweight} className="btn btn-ghost">
-          {busy ? "Working…" : "Save override"}
+          {busy ? "Working…" : "Save my changes"}
         </button>
         <button onClick={() => save(true)} disabled={busy || anyOverweight} className="btn btn-primary">
-          {busy ? "Working…" : "Save & re-push to DMSi"}
+          {busy ? "Working…" : "Save and send the updated plan to dispatch (DMSi)"}
         </button>
-        {anyOverweight && <span className="text-sm font-medium text-alert">A truck is over the legal limit — rebalance before pushing.</span>}
+        {anyOverweight && (
+          <span className="text-sm font-medium text-alert">
+            One truck is loaded past the legal weight limit — move something off
+            it before sending.
+          </span>
+        )}
         {msg && <span className="text-sm text-ink-muted">{msg}</span>}
       </div>
     </Overlay>
