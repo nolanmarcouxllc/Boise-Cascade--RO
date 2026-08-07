@@ -79,8 +79,8 @@ function LoginForm() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <div className="mb-1 flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-brand-700">
-            <LogoMark className="h-7 w-7 text-brand-600" />
+          <LogoMark className="mb-4 h-9 w-auto" />
+          <div className="mb-1 text-sm font-medium uppercase tracking-wide text-brand-700">
             Route Consolidation
           </div>
           <h1 className="text-2xl font-semibold text-ink">

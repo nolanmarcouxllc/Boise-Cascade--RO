@@ -21,9 +21,10 @@ export default async function AppLayout({
       <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[rgba(255,255,255,0.82)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <LogoMark className="h-8 w-8 text-brand-600" />
-              <span className="text-sm font-semibold text-ink">
+            <div className="flex shrink-0 items-center gap-3">
+              <LogoMark className="h-8 w-auto shrink-0" />
+              <span className="hidden h-6 w-px bg-[var(--border-strong)] sm:block" />
+              <span className="hidden text-sm font-medium text-ink-muted sm:block">
                 {ctx.org.name}
               </span>
             </div>
