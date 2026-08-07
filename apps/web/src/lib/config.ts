@@ -20,6 +20,12 @@ export type EngineConfig = {
     service_time_minutes: number;
     depot: { name: string; lat: number; lng: number };
   };
+  // Automated consolidation scheduler cadence (mirrors boise_cascade.yaml
+  // dispatch_windows). run_at times sit just before each DMSi dispatch wave.
+  dispatch_windows: {
+    interval_minutes: number;
+    run_at: string[]; // "HH:MM" local server time
+  };
   // Legal limits for the 53-ft flatbed fleet (mirrors
   // apps/engine/config/boise_cascade.yaml vehicle_constraints). The optimizer
   // validates combined loads against max_cargo_payload_lbs.
@@ -60,6 +66,10 @@ export const DEFAULT_CONFIG: EngineConfig = {
       lat: 42.1248,
       lng: -72.7496,
     },
+  },
+  dispatch_windows: {
+    interval_minutes: 30,
+    run_at: ["05:45", "09:15"],
   },
   vehicle_constraints: {
     trailer_type: "53-ft flatbed",

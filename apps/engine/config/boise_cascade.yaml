@@ -90,6 +90,16 @@ operations:
   delivery_window: "07:00-17:00, forklift/Moffett unload"
   equipment: "53-ft flatbed, all loads legal (no OD/OW)"
 
+# --- Automated consolidation scheduler ---------------------------------------
+# The web app's scheduler drains the order queue on this cadence. run_at times
+# sit just before each DMSi dispatch wave so the plan lands on the dispatcher's
+# screen before routes are built. interval_minutes is the fallback cadence
+# between the fixed runs. Mirrored into apps/web/src/lib/config.ts.
+dispatch_windows:
+  interval_minutes: 30
+  run_at: ["05:45", "09:15"]           # just before the 06:00 and 09:30 waves
+  timezone: "America/New_York"
+
 # --- Cost model --------------------------------------------------------------
 costs:
   currency: "USD"

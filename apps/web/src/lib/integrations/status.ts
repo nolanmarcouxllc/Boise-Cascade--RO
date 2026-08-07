@@ -8,6 +8,8 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SystemKey = "dmsi" | "pcmiler" | "edi";
+// Systems that record sync state but aren't external credentialed connections.
+export type SyncSystem = SystemKey | "automation";
 
 export type SystemStatus = {
   system: SystemKey;
@@ -75,7 +77,7 @@ export async function getIntegrationStatus(orgId: string): Promise<SystemStatus[
 
 export async function recordSync(
   orgId: string,
-  system: SystemKey,
+  system: SyncSystem,
   recordCount: number,
   detail?: string,
 ): Promise<void> {
