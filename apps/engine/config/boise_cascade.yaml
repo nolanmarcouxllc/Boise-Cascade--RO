@@ -35,6 +35,12 @@ schema:
   truck_id: "truck_id"
   weight_lbs: "weight_lbs"
   delivery_window: "dispatch_window"   # DMSi release wave (06:30 / 09:45)
+  # BOL line-item detail — carried into consolidation_findings.plan_json
+  # (delivery_records has no product column; stored in the finding instead).
+  product: "product"
+  quantity: "quantity"
+  unit: "unit"
+  board_feet: "board_feet"
   lat: "lat"
   lng: "lng"
 

@@ -72,19 +72,34 @@ export async function POST(request: Request, { params }: { params: { id: string 
     (byTruck.get(t) ?? byTruck.set(t, []).get(t)!).push(r);
   }
   const groupIds = new Set(orderIds);
+  // BOL line items (stored in the finding), keyed by delivery-record id.
+  const lineItems = (plan.line_items ?? []) as {
+    order_number: string; record_id: string | null; customer: string | null;
+    product: string | null; quantity: number | null; unit: string | null;
+    board_feet: number | null; weight_lbs: number | null;
+  }[];
+  const liByRecord = new Map(lineItems.filter((li) => li.record_id).map((li) => [li.record_id as string, li]));
+
   const manifest = Array.from(byTruck.entries()).map(([truckId, recs]) => {
     const dayWeight = recs.reduce((a, r) => a + (r.order_size ?? 0), 0);
     return {
       truckId,
       dayWeightLbs: dayWeight,
       remainingCapacityLbs: Math.max(0, maxLoad - dayWeight),
-      stops: recs.map((r) => ({
-        orderNumber: r.route_id,
-        customer: r.customer_name,
-        weightLbs: r.order_size ?? 0,
-        window: r.delivery_window,
-        inGroup: groupIds.has(r.id),
-      })),
+      stops: recs.map((r) => {
+        const li = liByRecord.get(r.id);
+        return {
+          orderNumber: li?.order_number ?? r.route_id,
+          customer: r.customer_name,
+          weightLbs: r.order_size ?? 0,
+          window: r.delivery_window,
+          inGroup: groupIds.has(r.id),
+          product: li?.product ?? null,
+          quantity: li?.quantity ?? null,
+          unit: li?.unit ?? null,
+          boardFeet: li?.board_feet ?? null,
+        };
+      }),
     };
   });
 
@@ -133,6 +148,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       loadFactorBefore: pct(combinedGroupWeight / Math.max(1, (plan.distinct_trucks ?? 1) * maxLoad)),
       loadFactorAfter: pct(combinedGroupWeight / Math.max(1, (plan.min_trucks_needed ?? 1) * maxLoad)),
     },
+    billOfLading: lineItems,
     depot: { name: depot.name, lat: depot.lat, lng: depot.lng },
     provider: activeProvider(),
     before: beforeRoutes.map((r, i) => ({ truckId: r.truckId, stops: r.stops, geometry: beforeGeom[i] })),

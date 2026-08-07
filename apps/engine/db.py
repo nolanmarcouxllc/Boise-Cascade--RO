@@ -245,13 +245,30 @@ def update_run_status(client, run_id: str, status: str) -> None:
 
 
 def insert_findings(client, org_id: str, run_id: str, result: dict,
-                    order_id_map: dict | None = None) -> int:
+                    order_id_map: dict | None = None,
+                    order_details: dict | None = None) -> int:
     """Write one consolidation_findings row per candidate group. When
     `order_id_map` is given (CSV ingest path), the plan's order_ids are
-    translated to delivery_records uuids so the web app can resolve stops."""
+    translated to delivery_records uuids so the web app can resolve stops.
+    `order_details` (keyed by source order_id) becomes the BOL line items."""
     id_map = order_id_map or {}
+    details = order_details or {}
     rows = []
     for g in result["groups"]:
+        # Bill-of-lading line items for this group's orders.
+        line_items = []
+        for src_oid in g["order_ids"]:
+            d = details.get(str(src_oid), {})
+            line_items.append({
+                "order_number": str(src_oid),
+                "record_id": id_map.get(str(src_oid)),
+                "customer": d.get("customer"),
+                "product": d.get("product"),
+                "quantity": d.get("quantity"),
+                "unit": d.get("unit"),
+                "board_feet": d.get("board_feet"),
+                "weight_lbs": d.get("weight_lbs"),
+            })
         rows.append({
             "org_id": org_id,
             "run_id": run_id,
@@ -275,6 +292,7 @@ def insert_findings(client, org_id: str, run_id: str, result: dict,
                 "leg_miles": g["leg_miles"],
                 "centroid": list(g["centroid"]),
                 "cost_3pl_benchmark": g["cost_3pl_benchmark"],
+                "line_items": line_items,
             },
         })
     if not rows:

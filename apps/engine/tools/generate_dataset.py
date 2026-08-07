@@ -183,26 +183,28 @@ BAD_DAY = "2026-07-29"
 GROUPS_PER_DAY = {d: (11 if d == BAD_DAY else n) for d, n in zip(DATES, [5, 6, 5, 5, 6, 5, 5, 11, 5, 6])}
 GEO_PER_DAY = {d: (5 if d == BAD_DAY else 2) for d in DATES}
 
+# name, unit_weight_lbs, unit, board_feet_per_unit (None = board feet N/A).
+# Keep this list length-stable (one random.choice per order) so the RNG stream
+# and every downstream weight/number stay identical when regenerated.
 PRODUCTS = [
-    ("OSB 7/16 4x8 sheathing", 2450, "pallets"),
-    ("CDX plywood 1/2 4x8", 2300, "pallets"),
-    ("SPF dimensional lumber 2x4-2x10", 2.35, "BF"),
-    ("LVL 1.75x11.875 beams", 95, "pcs"),
-    ("BCI I-joists 11.875", 62, "pcs"),
-    ("James Hardie lap siding", 2900, "pallets"),
-    ("CertainTeed vinyl siding", 1450, "pallets"),
-    ("Trex composite decking", 2250, "pallets"),
-    ("Millwork & interior trim", 1800, "bundles"),
+    ("LVL Beams 1.75x11.875 18ft", 95, "pcs", 31.2),
+    ('OSB 7/16" 4x8 Sheathing', 46, "sheets", None),
+    ("Dimensional Lumber 2x10x16", 37, "pcs", 26.7),
+    ('CDX Plywood 1/2" 4x8', 48, "sheets", None),
+    ('BCI I-Joists 11-7/8" 20ft', 62, "pcs", None),
+    ('James Hardie Lap Siding 8.25"', 2900, "pallets", None),
+    ("CertainTeed Vinyl Siding D4", 1450, "pallets", None),
+    ("Trex Composite Decking 20ft", 27, "pcs", None),
+    ("Pine Millwork & Interior Trim", 1800, "bundles", None),
 ]
 
 
 def product_for(weight):
-    name, unit_w, unit = random.choice(PRODUCTS)
-    if unit == "BF":
-        n = int(weight / unit_w / 100) * 100
-        return name, f"{n:,} BF"
-    n = max(1, round(weight / unit_w))
-    return name, f"{n} {unit}"
+    """One realistic BOL line item for an order. Exactly one RNG call."""
+    name, unit_w, unit, bf_per = random.choice(PRODUCTS)
+    qty = max(1, round(weight / unit_w))
+    board_feet = int(round(qty * bf_per)) if bf_per else None
+    return {"product": name, "quantity": qty, "unit": unit, "board_feet": board_feet}
 
 
 def latlng(code):
@@ -244,13 +246,14 @@ class Day:
 
     def add(self, code, truck, weight, window, hot=False):
         c = CUST[code]
-        prod, units = product_for(weight)
+        li = product_for(weight)
         self.rows.append({
             "delivery_date": self.date, "dispatch_window": window,
             "customer_id": code, "customer_name": c[1], "address": c[2],
             "city": c[3], "state": c[4], "zip": c[5], "truck_id": truck,
-            "product": prod, "units": units, "weight_lbs": weight,
-            "lat": c[6], "lng": c[7],
+            "product": li["product"], "quantity": li["quantity"], "unit": li["unit"],
+            "board_feet": li["board_feet"] if li["board_feet"] is not None else "",
+            "weight_lbs": weight, "lat": c[6], "lng": c[7],
         })
         self.truck_w[truck] += weight
         self.truck_n[truck] += 1
@@ -445,7 +448,7 @@ def main():
 
     cols = ["order_id", "delivery_date", "dispatch_window", "customer_id",
             "customer_name", "address", "city", "state", "zip", "truck_id",
-            "product", "units", "weight_lbs", "lat", "lng"]
+            "product", "quantity", "unit", "board_feet", "weight_lbs", "lat", "lng"]
     with open(OUT, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=cols)
         w.writeheader()

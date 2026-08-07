@@ -29,7 +29,14 @@ type Detail = {
     truckId: string;
     dayWeightLbs: number;
     remainingCapacityLbs: number;
-    stops: { orderNumber: string | null; customer: string | null; weightLbs: number; window: string | null; inGroup: boolean }[];
+    stops: {
+      orderNumber: string | null; customer: string | null; weightLbs: number; window: string | null; inGroup: boolean;
+      product: string | null; quantity: number | null; unit: string | null; boardFeet: number | null;
+    }[];
+  }[];
+  billOfLading: {
+    order_number: string; customer: string | null; product: string | null;
+    quantity: number | null; unit: string | null; board_feet: number | null; weight_lbs: number | null;
   }[];
   numbers: {
     wastedMiles: number; wastedHours: number; recoverable: number; cost3pl: number;
@@ -145,11 +152,19 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                         <span className="text-sm font-semibold" style={{ color: TRUCK_COLORS[i % TRUCK_COLORS.length] }}>Truck {m.truckId}</span>
                         <span className="text-xs text-ink-faint">{Math.round(m.remainingCapacityLbs / 1000)}k open</span>
                       </div>
-                      <ul className="mt-2 space-y-1 text-xs text-ink-muted">
+                      <ul className="mt-2 space-y-1.5 text-xs text-ink-muted">
                         {m.stops.map((s, j) => (
-                          <li key={j} className={s.inGroup ? "font-medium text-ink" : ""}>
-                            {s.customer} · {Math.round(s.weightLbs).toLocaleString()} lb · {s.window}
-                            {s.inGroup ? " ◄" : ""}
+                          <li key={j}>
+                            <div className={s.inGroup ? "font-medium text-ink" : ""}>
+                              {s.customer} · {Math.round(s.weightLbs).toLocaleString()} lb · {s.window}
+                              {s.inGroup ? " ◄" : ""}
+                            </div>
+                            {s.product && (
+                              <div className="text-ink-faint">
+                                {s.product} · {s.quantity?.toLocaleString()} {s.unit}
+                                {s.boardFeet ? ` · ${s.boardFeet.toLocaleString()} bf` : ""}
+                              </div>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -164,6 +179,52 @@ export function FindingPanel({ findingId, onClose }: { findingId: string | null;
                   </span>
                 </p>
               </Section>
+
+              {detail.billOfLading.length > 0 && (
+                <Section title="Consolidated bill of lading">
+                  <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-[var(--border)] bg-black/[0.02] text-left uppercase tracking-wide text-ink-faint">
+                          <th className="px-2 py-2 font-medium">Order</th>
+                          <th className="px-2 py-2 font-medium">Product</th>
+                          <th className="px-2 py-2 text-right font-medium">Qty</th>
+                          <th className="px-2 py-2 text-right font-medium">Board ft</th>
+                          <th className="px-2 py-2 text-right font-medium">Weight</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detail.billOfLading.map((li) => (
+                          <tr key={li.order_number} className="border-b border-slate-100 last:border-0">
+                            <td className="px-2 py-2 font-mono text-ink-muted">{li.order_number}</td>
+                            <td className="px-2 py-2 text-ink">
+                              {li.product ?? "—"}
+                              <span className="block text-ink-faint">{li.customer}</span>
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums text-ink-muted">
+                              {li.quantity?.toLocaleString() ?? "—"} {li.unit ?? ""}
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums text-ink-muted">
+                              {li.board_feet ? li.board_feet.toLocaleString() : "—"}
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums text-ink-muted">
+                              {li.weight_lbs?.toLocaleString() ?? "—"} lb
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-black/[0.02] font-semibold text-ink">
+                          <td className="px-2 py-2" colSpan={4}>
+                            Consolidated load · {detail.billOfLading.length} orders
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums">
+                            {detail.combinedGroupWeightLbs.toLocaleString()} lb
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </Section>
+              )}
 
               <Section title="Before → after routes">
                 <div className="space-y-3">

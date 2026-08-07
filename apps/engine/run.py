@@ -37,6 +37,13 @@ def _resolve(path: str) -> str:
     return path if os.path.isabs(path) else os.path.join(ENGINE_DIR, path)
 
 
+def _int_or_none(v):
+    try:
+        return int(round(float(v)))
+    except (TypeError, ValueError):
+        return None
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Route consolidation diagnostic (Phase 0)")
     p.add_argument("--config", default="config/boise_cascade.yaml",
@@ -123,8 +130,22 @@ def main(argv=None) -> int:
                 "records_skipped_no_coords": int(df["lat"].isna().sum()),
             },
         }
+        # Per-order BOL line items, keyed by source order_id, for the manifest.
+        order_details = {}
+        for _, r in df.iterrows():
+            oid = str(r.get("order_id"))
+            bf = str(r.get("board_feet") or "").strip()
+            order_details[oid] = {
+                "customer": r.get("customer_name"),
+                "product": r.get("product") or None,
+                "quantity": _int_or_none(r.get("quantity")),
+                "unit": r.get("unit") or None,
+                "board_feet": _int_or_none(bf) if bf else None,
+                "weight_lbs": _int_or_none(r.get("weight_lbs")),
+            }
+
         run_id = db.create_analysis_run(client, org_id, params, upload_id, status="running")
-        db.insert_findings(client, org_id, run_id, result, order_id_map)
+        db.insert_findings(client, org_id, run_id, result, order_id_map, order_details)
         db.update_run_status(client, run_id, "completed")
 
     # --- report (always writes local summary + map) --------------------------
