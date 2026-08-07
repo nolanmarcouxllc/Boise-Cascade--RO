@@ -22,14 +22,20 @@ export default async function DashboardPage({
       .maybeSingle();
     run = data as AnalysisRun | null;
   } else {
+    // Latest completed check that actually analyzed deliveries. A check run on
+    // orders that haven't been dispatched yet (no trucks) analyzes 0 records —
+    // don't let that blank the dashboard; fall back to the newest real one.
     const { data } = await supabase
       .from("analysis_runs")
       .select("*")
       .eq("status", "completed")
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    run = data as AnalysisRun | null;
+      .limit(10);
+    const runs = (data ?? []) as AnalysisRun[];
+    run =
+      runs.find((r) => (r.params?.totals?.records_analyzed ?? 0) > 0) ??
+      runs[0] ??
+      null;
   }
 
   if (!run) return <EmptyState />;

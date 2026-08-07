@@ -17,18 +17,24 @@ export default async function AnalyzePage() {
 
   const { data: recCounts } = await supabase
     .from("delivery_records")
-    .select("upload_id");
+    .select("upload_id, truck_id");
   const counts = new Map<string, number>();
+  const truckCounts = new Map<string, number>();
   for (const r of recCounts ?? []) {
-    const k = (r as { upload_id: string | null }).upload_id;
-    if (k) counts.set(k, (counts.get(k) ?? 0) + 1);
+    const row = r as { upload_id: string | null; truck_id: string | null };
+    if (!row.upload_id) continue;
+    counts.set(row.upload_id, (counts.get(row.upload_id) ?? 0) + 1);
+    if (row.truck_id) truckCounts.set(row.upload_id, (truckCounts.get(row.upload_id) ?? 0) + 1);
   }
 
+  // A check compares what trucks actually did — orders that haven't been
+  // assigned to trucks yet (fresh from the order feed) can't be checked.
   const options = uploads.map((u) => ({
     id: u.id,
     label: u.storage_path.split("/").pop() ?? u.id,
     date: shortDate(u.created_at),
     records: counts.get(u.id) ?? 0,
+    checkable: (truckCounts.get(u.id) ?? 0) > 0,
   }));
 
   const { data: runsData } = await supabase

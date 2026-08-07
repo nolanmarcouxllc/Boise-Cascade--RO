@@ -25,18 +25,22 @@ export async function POST(request: Request) {
   const scope: "day" | "week" | "all" = ["day", "week", "all"].includes(body?.scope) ? body.scope : "day";
   const anchor: string | undefined = typeof body?.date === "string" ? body.date : undefined;
 
-  // Resolve upload: explicit, else latest completed run's upload.
+  // Resolve upload: explicit, else the latest completed run that actually
+  // analyzed deliveries (skip empty runs on not-yet-dispatched orders so the
+  // map never blanks out).
   let uploadId: string | null = typeof body?.uploadId === "string" ? body.uploadId : null;
   if (!uploadId) {
-    const { data: run } = await admin
+    const { data } = await admin
       .from("analysis_runs")
-      .select("upload_id")
+      .select("upload_id, params")
       .eq("org_id", orgId)
       .eq("status", "completed")
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    uploadId = (run?.upload_id as string) ?? null;
+      .limit(10);
+    const runs = (data ?? []) as { upload_id: string | null; params: { totals?: { records_analyzed?: number } } | null }[];
+    const best =
+      runs.find((r) => (r.params?.totals?.records_analyzed ?? 0) > 0) ?? runs[0];
+    uploadId = (best?.upload_id as string) ?? null;
   }
   if (!uploadId) return NextResponse.json({ error: "No dataset found" }, { status: 404 });
 

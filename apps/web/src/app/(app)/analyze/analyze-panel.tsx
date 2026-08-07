@@ -6,7 +6,7 @@ import Link from "next/link";
 import { money } from "@/lib/format";
 import type { RunTotals } from "@/lib/types";
 
-type Option = { id: string; label: string; date: string; records: number };
+type Option = { id: string; label: string; date: string; records: number; checkable: boolean };
 type Phase = "idle" | "running" | "completed" | "failed";
 
 const POLL_INTERVAL_MS = 1000;
@@ -14,7 +14,9 @@ const MAX_POLLS = 120; // ~2 minutes
 
 export function AnalyzePanel({ options }: { options: Option[] }) {
   const router = useRouter();
-  const [uploadId, setUploadId] = useState(options[0]?.id ?? "");
+  const [uploadId, setUploadId] = useState(
+    (options.find((o) => o.checkable) ?? options[0])?.id ?? "",
+  );
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
@@ -88,15 +90,16 @@ export function AnalyzePanel({ options }: { options: Option[] }) {
             disabled={phase === "running"}
           >
             {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label} — {o.records} records · {o.date}
+              <option key={o.id} value={o.id} disabled={!o.checkable}>
+                {o.label} — {o.records} deliveries · {o.date}
+                {o.checkable ? "" : " (waiting for dispatch — nothing to check yet)"}
               </option>
             ))}
           </select>
         </label>
         <button
           onClick={start}
-          disabled={phase === "running" || !uploadId}
+          disabled={phase === "running" || !uploadId || !options.find((o) => o.id === uploadId)?.checkable}
           className="btn btn-primary px-5"
         >
           {phase === "running"
