@@ -272,8 +272,10 @@ export function FleetMap({
         </div>
       </div>
 
-      {/* Map + side panel */}
-      <div className="relative">
+      {/* Map + side panel. `isolate` contains Leaflet's internal z-indexes
+          (panes 400, controls 800+) inside this card so the sticky title bar
+          always stays on top when scrolling. */}
+      <div className="relative isolate z-0">
         <div
           className="overflow-hidden rounded-2xl border border-[var(--border)]"
           style={{ height: "70vh", minHeight: 600, opacity: fading ? 0.25 : 1, transition: "opacity .28s" }}
