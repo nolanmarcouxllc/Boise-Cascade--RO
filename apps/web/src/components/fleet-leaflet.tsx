@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -40,6 +40,7 @@ export default function FleetLeaflet({
   emphasize?: Set<string>;
 }) {
   const depotPos: [number, number] = [depot.lat, depot.lng];
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
 
   const depotIcon = useMemo(
     () =>
@@ -64,32 +65,39 @@ export default function FleetLeaflet({
       {routes.map((r) => {
         const isSel = r.key === selectedKey;
         const isEmph = emphasize?.has(r.truckId) ?? false;
-        // Whole line is the click target: candidates thickest (8px) so the
-        // waste is the easiest thing on the map to hit; everything >= 6px.
-        const baseWeight = isSel || isEmph ? 10 : r.hasCandidate ? 8 : 6;
-        const baseOpacity = isSel || isEmph ? 1 : routeOpacity(r);
+        const isHover = r.key === hoverKey;
+        // Thin VISIBLE line (so 40+ routes don't blanket the map) + an
+        // invisible ~14px HIT line on top that owns clicks/hover. Wide click
+        // target, light visual weight.
+        const visWeight = isSel || isEmph ? 5 : (r.hasCandidate ? 3.5 : 2.5) + (isHover ? 1.5 : 0);
+        const visOpacity = isSel || isEmph || isHover ? 1 : routeOpacity(r);
+        const onClick = () => {
+          const cand = r.stops.find((s) => s.isCandidate);
+          if (r.hasCandidate && cand && onOpenFinding) onOpenFinding(cand.id);
+          else onSelectRoute(r.key);
+        };
         return (
-          <Polyline
-            key={r.key}
-            positions={r.geometry}
-            pathOptions={{
-              color: routeColor(r),
-              weight: baseWeight,
-              opacity: baseOpacity,
-              className: r.hasCandidate ? "pulse-route" : undefined,
-            }}
-            eventHandlers={{
-              click: () => {
-                const cand = r.stops.find((s) => s.isCandidate);
-                if (r.hasCandidate && cand && onOpenFinding) onOpenFinding(cand.id);
-                else onSelectRoute(r.key);
-              },
-              // Hover affordance: brighten + thicken so it reads as clickable
-              // before the click (Leaflet already sets cursor: pointer).
-              mouseover: (e) => e.target.setStyle({ weight: baseWeight + 2, opacity: 1 }),
-              mouseout: (e) => e.target.setStyle({ weight: baseWeight, opacity: baseOpacity }),
-            }}
-          />
+          <Fragment key={r.key}>
+            <Polyline
+              positions={r.geometry}
+              interactive={false}
+              pathOptions={{
+                color: routeColor(r),
+                weight: visWeight,
+                opacity: visOpacity,
+                className: r.hasCandidate ? "pulse-route" : undefined,
+              }}
+            />
+            <Polyline
+              positions={r.geometry}
+              pathOptions={{ color: "#000", weight: 14, opacity: 0 }}
+              eventHandlers={{
+                click: onClick,
+                mouseover: () => setHoverKey(r.key),
+                mouseout: () => setHoverKey((k) => (k === r.key ? null : k)),
+              }}
+            />
+          </Fragment>
         );
       })}
 
