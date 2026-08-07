@@ -7,7 +7,7 @@ import { resolveWithCache } from "@/lib/integrations/geometry-cache";
 import { activeProvider, type LatLng } from "@/lib/routing";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 60; // Vercel Hobby cap; cold "all"-scope loads may need a warm cache
 
 // Build the BEFORE/AFTER fleet picture for a period and attach road geometry
 // (PC*MILER when keyed, else OSRM), cached in route_geometry_cache. Auth-gated
