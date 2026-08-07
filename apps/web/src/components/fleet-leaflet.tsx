@@ -64,14 +64,18 @@ export default function FleetLeaflet({
       {routes.map((r) => {
         const isSel = r.key === selectedKey;
         const isEmph = emphasize?.has(r.truckId) ?? false;
+        // Whole line is the click target: candidates thickest (8px) so the
+        // waste is the easiest thing on the map to hit; everything >= 6px.
+        const baseWeight = isSel || isEmph ? 10 : r.hasCandidate ? 8 : 6;
+        const baseOpacity = isSel || isEmph ? 1 : routeOpacity(r);
         return (
           <Polyline
             key={r.key}
             positions={r.geometry}
             pathOptions={{
               color: routeColor(r),
-              weight: isSel || isEmph ? 6 : 2.5,
-              opacity: isSel || isEmph ? 1 : routeOpacity(r),
+              weight: baseWeight,
+              opacity: baseOpacity,
               className: r.hasCandidate ? "pulse-route" : undefined,
             }}
             eventHandlers={{
@@ -80,6 +84,10 @@ export default function FleetLeaflet({
                 if (r.hasCandidate && cand && onOpenFinding) onOpenFinding(cand.id);
                 else onSelectRoute(r.key);
               },
+              // Hover affordance: brighten + thicken so it reads as clickable
+              // before the click (Leaflet already sets cursor: pointer).
+              mouseover: (e) => e.target.setStyle({ weight: baseWeight + 2, opacity: 1 }),
+              mouseout: (e) => e.target.setStyle({ weight: baseWeight, opacity: baseOpacity }),
             }}
           />
         );
