@@ -157,3 +157,31 @@
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
+
+/* Consolidation-candidate routes/stops pulse so they read without filtering. */
+@keyframes routePulse {
+  0%,
+  100% {
+    stroke-opacity: 0.9;
+  }
+  50% {
+    stroke-opacity: 0.35;
+  }
+}
+.pulse-route {
+  animation: routePulse 1.8s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+    fill-opacity: 0.9;
+  }
+  50% {
+    stroke-opacity: 0.4;
+    fill-opacity: 0.35;
+  }
+}
+.pulse-dot {
+  animation: dotPulse 1.8s ease-in-out infinite;
+}

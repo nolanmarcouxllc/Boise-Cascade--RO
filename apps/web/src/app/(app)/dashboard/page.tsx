@@ -1,19 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { money, num, shortDate } from "@/lib/format";
-import { DEFAULT_CONFIG } from "@/lib/config";
-import { RouteMaps } from "@/components/route-maps";
+import { FleetMap } from "@/components/fleet-map";
 import type { AnalysisRun, ConsolidationFinding, RunTotals } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-type DeliveryPoint = {
-  id: string;
-  lat: number | null;
-  lng: number | null;
-  customer_name: string | null;
-  truck_id: string | null;
-};
 
 export default async function DashboardPage({
   searchParams,
@@ -50,15 +41,8 @@ export default async function DashboardPage({
     .order("est_cost_usd", { ascending: false });
   const findings = (findingsData ?? []) as ConsolidationFinding[];
 
-  // Delivery coordinates for this run's upload, used to draw the lane maps.
-  let records: DeliveryPoint[] = [];
-  if (run.upload_id) {
-    const { data: recData } = await supabase
-      .from("delivery_records")
-      .select("id, lat, lng, customer_name, truck_id")
-      .eq("upload_id", run.upload_id);
-    records = (recData ?? []) as DeliveryPoint[];
-  }
+  // Default the fleet map to the worst day (most findings) — the headline.
+  const worstDay = pickWorstDay(findings);
 
   const totals = run.params?.totals;
 
@@ -88,18 +72,30 @@ export default async function DashboardPage({
       ) : (
         <>
           <HeroAndBeforeAfter totals={totals} />
+          {findings.length > 0 && <FleetMap initialDate={worstDay} />}
           <FindingsTable findings={findings} />
-          {findings.length > 0 && (
-            <RouteMaps
-              findings={findings}
-              depot={DEFAULT_CONFIG.costs.depot}
-              records={records}
-            />
-          )}
         </>
       )}
     </div>
   );
+}
+
+// The day with the most findings — the most compelling default for the map.
+function pickWorstDay(findings: ConsolidationFinding[]): string | undefined {
+  const counts = new Map<string, number>();
+  for (const f of findings) {
+    if (!f.date) continue;
+    counts.set(f.date, (counts.get(f.date) ?? 0) + 1);
+  }
+  let best: string | undefined;
+  let bestN = -1;
+  for (const [d, n] of counts) {
+    if (n > bestN) {
+      bestN = n;
+      best = d;
+    }
+  }
+  return best;
 }
 
 function HeroAndBeforeAfter({ totals }: { totals?: RunTotals }) {
