@@ -106,7 +106,8 @@ function weekOf(date: string, allDays: string[]): string[] {
       const prev = new Date(allDays[i - 1] + "T00:00:00Z").getTime();
       const now = new Date(allDays[i] + "T00:00:00Z").getTime();
       const gapDays = (now - prev) / 86400000;
-      if (gapDays <= 3) cur.push(allDays[i]);
+      // gap of 1–2 days = same week; a Fri->Mon weekend gap (3) starts a new week
+      if (gapDays < 3) cur.push(allDays[i]);
       else {
         runs.push(cur);
         cur = [allDays[i]];

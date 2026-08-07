@@ -123,6 +123,7 @@ export function FleetMap({
 
   const routesForMode = useMemo(() => (data ? (mode === "before" ? data.before : data.after) : []), [data, mode]);
 
+  const weeks = useMemo(() => computeWeeks(data?.days ?? []), [data]);
   const trucks = useMemo(() => Array.from(new Set(routesForMode.map((r) => r.truckId))).sort(), [routesForMode]);
   const customers = useMemo(
     () => Array.from(new Set(routesForMode.flatMap((r) => r.stops.map((s) => s.customer)))).sort(),
@@ -197,14 +198,33 @@ export function FleetMap({
             ["all", "All"],
           ]}
         />
-        {scope !== "all" && data && (
+        {scope === "day" && data && (
           <select value={anchor} onChange={(e) => setAnchor(e.target.value)} className="!w-auto">
             {data.days.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {fmtDay(d)}
               </option>
             ))}
           </select>
+        )}
+        {scope === "week" && data && (
+          <select
+            value={weeks.find((w) => w.days.includes(anchor ?? ""))?.start ?? weeks[0]?.start ?? ""}
+            onChange={(e) => setAnchor(e.target.value)}
+            className="!w-auto"
+          >
+            {weeks.map((w) => (
+              <option key={w.start} value={w.start}>
+                {w.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {scope === "all" && data && data.days.length > 0 && (
+          <span className="text-ink-muted">
+            {fmtMD(data.days[0])} – {fmtMD(data.days[data.days.length - 1])},{" "}
+            {data.days[0].slice(0, 4)}
+          </span>
         )}
         <select value={truck} onChange={(e) => setTruck(e.target.value)} className="!w-auto">
           <option value="all">All trucks</option>
@@ -296,6 +316,53 @@ export function FleetMap({
       </div>
     </section>
   );
+}
+
+// "Mon Jul 20"
+function fmtDay(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+// "Jul 20"
+function fmtMD(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+// Group sorted ISO days into contiguous business-week runs (Fri->Mon gap = 3),
+// labeled by their real range: "Week of Jul 20–24", "Week of Jul 28–Aug 1".
+function computeWeeks(days: string[]): { start: string; end: string; label: string; days: string[] }[] {
+  const runs: string[][] = [];
+  let cur: string[] = [];
+  for (let i = 0; i < days.length; i++) {
+    if (cur.length === 0) cur = [days[i]];
+    else {
+      const prev = new Date(days[i - 1] + "T00:00:00Z").getTime();
+      const now = new Date(days[i] + "T00:00:00Z").getTime();
+      // gap of 1–2 days = same week; a Fri->Mon weekend gap (3) starts a new week
+      if ((now - prev) / 86400000 < 3) cur.push(days[i]);
+      else {
+        runs.push(cur);
+        cur = [days[i]];
+      }
+    }
+  }
+  if (cur.length) runs.push(cur);
+  return runs.map((r) => {
+    const start = r[0];
+    const end = r[r.length - 1];
+    const sameMonth = start.slice(5, 7) === end.slice(5, 7);
+    const endLabel = sameMonth ? String(Number(end.slice(8, 10))) : fmtMD(end);
+    return { start, end, days: r, label: `Week of ${fmtMD(start)}–${endLabel}` };
+  });
 }
 
 function LegendRow({ color, label }: { color: string; label: string }) {
