@@ -27,6 +27,7 @@ export default function FleetLeaflet({
   routes,
   selectedKey,
   onSelectRoute,
+  onOpenFinding,
   fitKey,
   emphasize,
 }: {
@@ -34,6 +35,7 @@ export default function FleetLeaflet({
   routes: RouteView[];
   selectedKey: string | null;
   onSelectRoute: (key: string) => void;
+  onOpenFinding?: (groupId: string) => void;
   fitKey: string;
   emphasize?: Set<string>;
 }) {
@@ -72,7 +74,13 @@ export default function FleetLeaflet({
               opacity: isSel || isEmph ? 1 : routeOpacity(r),
               className: r.hasCandidate ? "pulse-route" : undefined,
             }}
-            eventHandlers={{ click: () => onSelectRoute(r.key) }}
+            eventHandlers={{
+              click: () => {
+                const cand = r.stops.find((s) => s.isCandidate);
+                if (r.hasCandidate && cand && onOpenFinding) onOpenFinding(cand.id);
+                else onSelectRoute(r.key);
+              },
+            }}
           />
         );
       })}
@@ -83,6 +91,7 @@ export default function FleetLeaflet({
           const showAsMarker = r.key === selectedKey;
           if (!s.isCandidate && !showAsMarker) return null;
           const color = s.isCandidate ? RED : routeColor(r);
+          const openable = s.isCandidate && onOpenFinding;
           return (
             <CircleMarker
               key={`${r.key}:${s.id}`}
@@ -90,6 +99,7 @@ export default function FleetLeaflet({
               radius={showAsMarker ? 6 : 4}
               pathOptions={{ color, fillColor: color, fillOpacity: 0.9, weight: 1.5 }}
               className={s.isCandidate ? "pulse-dot" : undefined}
+              eventHandlers={openable ? { click: () => onOpenFinding!(s.id) } : undefined}
             >
               <Popup>
                 <strong>{s.customer}</strong>
@@ -105,7 +115,7 @@ export default function FleetLeaflet({
                       Consolidation candidate ({s.candidateType === "geo_cluster" ? "same area" : "same customer"})
                     </span>
                     <br />
-                    Fix: combine onto one truck with open capacity.
+                    Click the marker for the full breakdown →
                   </>
                 ) : null}
               </Popup>

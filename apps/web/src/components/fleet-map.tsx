@@ -22,6 +22,7 @@ export type FleetStopView = {
   window: string | null;
   isCandidate: boolean;
   candidateType?: "same_customer" | "geo_cluster";
+  groupId?: string;
 };
 
 export type RouteView = {
@@ -65,9 +66,11 @@ export type FleetHighlight = { date: string; truckIds: string[]; groupId?: strin
 export function FleetMap({
   initialDate,
   highlight,
+  onOpenFinding,
 }: {
   initialDate?: string;
   highlight?: FleetHighlight;
+  onOpenFinding?: (groupId: string) => void;
 }) {
   const [scope, setScope] = useState<Scope>("day");
   const [anchor, setAnchor] = useState<string | undefined>(initialDate);
@@ -261,6 +264,7 @@ export function FleetMap({
               routes={filtered}
               selectedKey={selectedKey}
               onSelectRoute={setSelectedKey}
+              onOpenFinding={onOpenFinding}
               fitKey={fitKey}
               emphasize={emphasize}
             />

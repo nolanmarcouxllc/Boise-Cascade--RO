@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { money, num, shortDate } from "@/lib/format";
 import type { ConsolidationFinding } from "@/lib/types";
-import { FindingDrawer } from "@/components/finding-drawer";
 
 type SortKey = "cost" | "miles" | "date" | "customer";
 
@@ -44,7 +43,10 @@ export function FindingsPanel({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-ink">Consolidation findings</h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-semibold text-ink">Consolidation findings</h2>
+        <p className="text-xs text-ink-muted">Click any row for the full breakdown →</p>
+      </div>
 
       <div className="panel overflow-hidden">
         <div className="overflow-x-auto">
@@ -55,9 +57,10 @@ export function FindingsPanel({
                 <SortableTh label="Customer / cluster" active={sort === "customer"} dir={dir} onClick={() => toggleSort("customer")} />
                 <SortableTh label="Date" active={sort === "date"} dir={dir} onClick={() => toggleSort("date")} />
                 <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 text-right font-medium">Trucks</th>
+                <th className="px-4 py-3 text-right font-medium">Trucks → fix</th>
                 <SortableTh label="Wasted mi" active={sort === "miles"} dir={dir} onClick={() => toggleSort("miles")} right />
                 <SortableTh label="Recoverable" active={sort === "cost"} dir={dir} onClick={() => toggleSort("cost")} right />
+                <th className="px-2 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -79,9 +82,12 @@ export function FindingsPanel({
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-ink-muted">
                       {f.consolidated_plan_json?.distinct_trucks ?? "—"}
+                      <span className="text-ink-faint"> → </span>
+                      <span className="text-good">{f.consolidated_plan_json?.min_trucks_needed ?? 1}</span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-ink-muted">{num(f.wasted_miles)}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-ink">{money(f.est_cost_usd)}</td>
+                    <td className="px-2 py-3 text-right text-ink-faint">{isSel ? "▾" : "▸"}</td>
                   </tr>
                 );
               })}
@@ -96,8 +102,6 @@ export function FindingsPanel({
           </div>
         )}
       </div>
-
-      {selectedId && <FindingDrawer findingId={selectedId} onClose={() => onSelect(null)} />}
     </section>
   );
 }
