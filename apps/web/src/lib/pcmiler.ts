@@ -129,20 +129,29 @@ export async function pcmilerGeocode(address: string): Promise<LatLng | null> {
   return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
 }
 
-// PC*MILER may return a GeoJSON FeatureCollection or a bare geometry; handle both.
+// PC*MILER returns a GeoJSON Feature whose geometry is usually a MultiLineString
+// (coordinates = array of lines, each an array of [lng,lat] points); it can also
+// be a plain LineString or a FeatureCollection. Handle all: flatten one level for
+// MultiLineString, then convert [lng,lat] -> [lat,lng].
 function extractLineString(data: unknown): LatLng[] | null {
   const obj = data as {
-    type?: string;
-    features?: { geometry?: { type?: string; coordinates?: number[][] } }[];
-    geometry?: { coordinates?: number[][] };
-    coordinates?: number[][];
+    features?: { geometry?: { coordinates?: unknown } }[];
+    geometry?: { coordinates?: unknown };
+    coordinates?: unknown;
   };
   const coords =
     obj?.features?.[0]?.geometry?.coordinates ??
     obj?.geometry?.coordinates ??
     obj?.coordinates;
-  if (!Array.isArray(coords)) return null;
-  return coords
-    .filter((c) => Array.isArray(c) && c.length >= 2)
+  if (!Array.isArray(coords) || coords.length === 0) return null;
+
+  // MultiLineString: coordinates is [line][point][lng,lat] (depth 3). LineString:
+  // [point][lng,lat] (depth 2). Detect by whether the innermost element nests.
+  const isMultiLine = Array.isArray(coords[0]) && Array.isArray((coords[0] as unknown[])[0]);
+  const points = (isMultiLine ? (coords as number[][][]).flat() : (coords as number[][]));
+
+  const out = points
+    .filter((c) => Array.isArray(c) && c.length >= 2 && typeof c[0] === "number" && typeof c[1] === "number")
     .map((c) => [c[1], c[0]] as LatLng);
+  return out.length >= 2 ? out : null;
 }
