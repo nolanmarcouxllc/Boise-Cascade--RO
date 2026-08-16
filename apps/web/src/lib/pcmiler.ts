@@ -77,9 +77,16 @@ async function pcmilerGet(path: string, params: Record<string, string>): Promise
       // route geometry is stable; let Next cache within a request lifecycle
       cache: "no-store",
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Surface the real failure (auth, quota, blocked egress, bad params) in
+      // the server logs instead of silently falling back to OSRM.
+      const body = await res.text().catch(() => "");
+      console.error(`[pcmiler] ${path} -> HTTP ${res.status} ${res.statusText}: ${body.slice(0, 300)}`);
+      return null;
+    }
     return await res.json();
-  } catch {
+  } catch (e) {
+    console.error(`[pcmiler] ${path} request failed: ${e instanceof Error ? e.message : String(e)}`);
     return null;
   }
 }

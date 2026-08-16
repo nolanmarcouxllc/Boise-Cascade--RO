@@ -36,6 +36,8 @@ type SideView = {
 };
 type CompareData = {
   provider: string;
+  pcmilerConfigured: boolean;
+  providerCounts: Record<string, number>;
   day: string;
   days: string[];
   depot: { name: string; lat: number; lng: number };
@@ -107,7 +109,7 @@ export function CompareClient() {
           {loading
             ? "Sending both sets of orders to PC*MILER for real truck routing…"
             : data
-              ? `Routed by ${data.provider === "pcmiler" ? "PC*MILER (53-ft flatbed truck routing)" : "the fallback router"} · ${shortDate(data.day)}`
+              ? providerNote(data)
               : "Click to route today's orders both ways and see the difference side by side."}
         </p>
       </div>
@@ -157,6 +159,20 @@ export function CompareClient() {
       </div>
     </div>
   );
+}
+
+// Honest routing status: distinguishes "PC*MILER drew the routes" from "key is
+// missing" and from "key present but PC*MILER didn't respond, so we fell back".
+function providerNote(data: CompareData): string {
+  const day = shortDate(data.day);
+  if (data.provider === "pcmiler") {
+    return `Routed by PC*MILER (53-ft flatbed truck routing) · ${day}`;
+  }
+  const fallbackName = data.provider === "osrm" ? "the OSRM backup router" : "straight-line estimates";
+  if (data.pcmilerConfigured) {
+    return `PC*MILER didn't respond — routed by ${fallbackName} instead · ${day}`;
+  }
+  return `PC*MILER key not found on the server — routed by ${fallbackName} · ${day}`;
 }
 
 function Headline({ value, label, tone }: { value: string; label: string; tone?: "good" }) {

@@ -29,6 +29,9 @@ export async function resolveRoute(points: LatLng[]): Promise<ResolvedRoute> {
   if (pcmilerConfigured()) {
     const pc = await pcmilerRoutePath(points);
     if (pc && pc.length >= 2) return { geometry: pc, provider: "pcmiler" };
+    // Configured but returned nothing usable — the pcmiler client already
+    // logged why. Note the downgrade so the fallback isn't invisible.
+    console.warn(`[routing] PC*MILER configured but a ${points.length}-stop leg fell back to OSRM`);
   }
   const osrm = await fetchRoadRoute(points);
   if (osrm && osrm.length >= 2) return { geometry: osrm, provider: "osrm" };

@@ -15,8 +15,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_CONFIG } from "@/lib/config";
 import { buildFleet, type RecordInput, type TruckRoute } from "@/lib/engine/optimize";
 import { distanceMiles } from "@/lib/engine/geo";
-import { resolveWithCache } from "@/lib/integrations/geometry-cache";
-import { activeProvider, type LatLng } from "@/lib/routing";
+import { resolveWithCacheDetailed, type ResolvedLeg } from "@/lib/integrations/geometry-cache";
+import { type LatLng } from "@/lib/routing";
+import { pcmilerConfigured } from "@/lib/pcmiler";
 
 const C = DEFAULT_CONFIG.costs;
 const MILE_RATE = C.cost_per_mile + (C.fuel_surcharge_per_mile ?? 0);
@@ -52,7 +53,9 @@ export type ComparisonResult =
   | { ok: false; error: string; status: number }
   | {
       ok: true;
-      provider: string;
+      provider: string; // the provider that ACTUALLY drew the routes
+      pcmilerConfigured: boolean; // whether the PC*MILER key is present at runtime
+      providerCounts: Record<string, number>; // legs drawn by each provider
       day: string;
       days: string[];
       depot: { name: string; lat: number; lng: number };
@@ -111,17 +114,23 @@ export async function runComparison(orgId: string, requestedDate: string | null)
 
   const depotPt: LatLng = [depot.lat, depot.lng];
   const legOf = (r: TruckRoute): LatLng[] => [depotPt, ...r.stops.map((s) => [s.lat, s.lng] as LatLng), depotPt];
-  const [beforeGeom, afterGeom] = await Promise.all([
-    resolveWithCache(orgId, fleet.before.map(legOf)),
-    resolveWithCache(orgId, fleet.after.map(legOf)),
+  const [beforeLegs, afterLegs] = await Promise.all([
+    resolveWithCacheDetailed(orgId, fleet.before.map(legOf)),
+    resolveWithCacheDetailed(orgId, fleet.after.map(legOf)),
   ]);
 
-  const before = toSide(fleet.before, beforeGeom);
-  const after = toSide(fleet.after, afterGeom);
+  const before = toSide(fleet.before, beforeLegs.map((l) => l.geometry));
+  const after = toSide(fleet.after, afterLegs.map((l) => l.geometry));
+
+  // Provider reflects what actually drew the routes, not just what's configured.
+  const providerCounts = tallyProviders([...beforeLegs, ...afterLegs]);
+  const provider = dominantProvider(providerCounts);
 
   return {
     ok: true,
-    provider: activeProvider(),
+    provider,
+    pcmilerConfigured: pcmilerConfigured(),
+    providerCounts,
     day,
     days,
     depot: { name: depot.name, lat: depot.lat, lng: depot.lng },
@@ -134,6 +143,22 @@ export async function runComparison(orgId: string, requestedDate: string | null)
       cost: round2(before.totalCost - after.totalCost),
     },
   };
+}
+
+function tallyProviders(legs: ResolvedLeg[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const l of legs) counts[l.provider] = (counts[l.provider] ?? 0) + 1;
+  return counts;
+}
+
+// The provider that drew the most legs, preferring a real road provider over the
+// straight-line last resort when both are present.
+function dominantProvider(counts: Record<string, number>): string {
+  const entries = Object.entries(counts).filter(([, n]) => n > 0);
+  if (entries.length === 0) return "straight";
+  const road = entries.filter(([p]) => p !== "straight");
+  const pool = road.length ? road : entries;
+  return pool.sort((a, b) => b[1] - a[1])[0][0];
 }
 
 function recordsForDay(records: RecordInput[], day: string): RecordInput[] {
