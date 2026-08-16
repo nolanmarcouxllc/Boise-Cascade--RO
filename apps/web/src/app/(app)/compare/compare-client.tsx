@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { money, num, shortDate } from "@/lib/format";
+import { parseDeliveryCsv, type DeliveryInsert } from "@/lib/engine/csv";
 import { DemoMap, type DemoRoute } from "@/components/demo-map";
 
 const RED = "#e6194b"; // "before" — every order on its own truck
 const GREEN = "#0a8a43"; // "after" — orders combined onto shared trucks
+const NEW_STOP = "#7c3aed"; // violet — the just-uploaded order
 
 type StopView = {
   id: string;
@@ -16,6 +18,16 @@ type StopView = {
   window: string | null;
   lat: number;
   lng: number;
+  isNew?: boolean;
+};
+type NewOrderPlacement = {
+  id: string;
+  customer: string;
+  weight: number;
+  beforeTruck: string | null;
+  afterTruck: string | null;
+  consolidated: boolean;
+  afterTruckStops: number;
 };
 type RouteView = {
   truckId: string;
@@ -44,22 +56,27 @@ type CompareData = {
   before: SideView;
   after: SideView;
   savings: { trucks: number; miles: number; hours: number; cost: number };
+  newOrders: NewOrderPlacement[];
+  warnings: string[];
 };
 
 export function CompareClient() {
   const [data, setData] = useState<CompareData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [day, setDay] = useState<string>("");
+  const [orders, setOrders] = useState<DeliveryInsert[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  async function run(date?: string) {
+  async function run(date: string | undefined, ordersArg: DeliveryInsert[]) {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/demo-compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(date ? { date } : {}),
+        body: JSON.stringify({ ...(date ? { date } : {}), orders: ordersArg }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error ?? "Could not run the comparison.");
@@ -72,17 +89,68 @@ export function CompareClient() {
     }
   }
 
+  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = ""; // allow re-uploading the same file
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const text = await file.text();
+      const parsed = parseDeliveryCsv(text);
+      if (parsed.rows.length === 0) {
+        throw new Error("No order rows found in that file. Check it has a header row and at least one order.");
+      }
+      const merged = [...orders, ...parsed.rows];
+      setOrders(merged);
+      await run(day || undefined, merged);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not read that file.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function clearOrders() {
+    setOrders([]);
+    run(day || undefined, []);
+  }
+
+  const busy = loading || uploading;
+
   return (
     <div className="space-y-6">
       {/* Control bar */}
       <div className="panel flex flex-wrap items-center gap-4 p-4">
         <button
-          onClick={() => run(data ? day : undefined)}
-          disabled={loading}
+          onClick={() => run(data ? day : undefined, orders)}
+          disabled={busy}
           className="btn btn-primary px-6 text-base"
         >
           {loading ? "Routing both plans…" : data ? "Run Comparison again" : "Run Comparison"}
         </button>
+
+        {/* Upload an order from DMSi */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,text/csv"
+          onChange={onUpload}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="btn btn-ghost"
+        >
+          {uploading ? "Adding order…" : "Upload Order from DMSi"}
+        </button>
+
+        {orders.length > 0 && (
+          <button onClick={clearOrders} disabled={busy} className="text-sm text-ink-faint underline underline-offset-2 hover:text-ink">
+            Clear uploaded {orders.length === 1 ? "order" : `${orders.length} orders`}
+          </button>
+        )}
 
         {data && (
           <label className="flex items-center gap-2 text-sm text-ink-muted">
@@ -91,9 +159,9 @@ export function CompareClient() {
               value={day}
               onChange={(e) => {
                 setDay(e.target.value);
-                run(e.target.value);
+                run(e.target.value, orders);
               }}
-              disabled={loading}
+              disabled={busy}
               className="!w-auto"
             >
               {data.days.map((d) => (
@@ -106,7 +174,7 @@ export function CompareClient() {
         )}
 
         <p className="text-sm text-ink-faint">
-          {loading
+          {busy
             ? "Sending both sets of orders to PC*MILER for real truck routing…"
             : data
               ? providerNote(data)
@@ -131,6 +199,18 @@ export function CompareClient() {
             <Headline value={String(data.savings.trucks)} label="fewer trucks on the road" tone="good" />
             <Headline value={`${num(data.savings.miles)} mi`} label="fewer miles driven" tone="good" />
           </div>
+        </div>
+      )}
+
+      {/* Where the uploaded order landed */}
+      {data && data.newOrders.length > 0 && <NewOrderCallout placements={data.newOrders} />}
+
+      {/* Geocoding / parse warnings */}
+      {data && data.warnings.length > 0 && (
+        <div className="rounded-xl border border-geo/30 bg-geo/10 px-4 py-3 text-sm text-geo">
+          {data.warnings.map((w, i) => (
+            <p key={i}>{w}</p>
+          ))}
         </div>
       )}
 
@@ -175,6 +255,43 @@ function providerNote(data: CompareData): string {
   return `PC*MILER key not found on the server — routed by ${fallbackName} · ${day}`;
 }
 
+// Plain-English story of where each uploaded order ended up, before vs after.
+function NewOrderCallout({ placements }: { placements: NewOrderPlacement[] }) {
+  return (
+    <div className="panel p-5" style={{ borderLeft: `4px solid ${NEW_STOP}` }}>
+      <div className="flex items-center gap-2">
+        <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: NEW_STOP }} />
+        <span className="text-sm font-semibold text-ink">
+          Your uploaded {placements.length === 1 ? "order" : "orders"} from DMSi
+        </span>
+      </div>
+      <ul className="mt-3 space-y-2 text-sm text-ink-muted">
+        {placements.map((p) => (
+          <li key={p.id} className="leading-relaxed">
+            <span className="font-medium text-ink">{p.customer}</span>{" "}
+            <span className="text-ink-faint">({p.weight.toLocaleString()} lb)</span> —{" "}
+            {p.consolidated ? (
+              <>
+                dispatch would send it out on its own truck{" "}
+                <span className="font-medium text-ink">({p.beforeTruck})</span> today. Through the
+                bridge it rides along on truck{" "}
+                <span className="font-medium text-good">{p.afterTruck}</span> with{" "}
+                {p.afterTruckStops - 1} {p.afterTruckStops - 1 === 1 ? "stop" : "stops"} already headed
+                that way — <span className="font-medium text-good">no extra truck leaves the yard</span>.
+              </>
+            ) : (
+              <>
+                it still needs its own truck even through the bridge — no truck already headed that
+                way could take it on without going over the legal 48,000 lb load.
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Headline({ value, label, tone }: { value: string; label: string; tone?: "good" }) {
   return (
     <div>
@@ -209,7 +326,7 @@ function Column({
     side?.routes.map((r) => ({
       truckId: r.truckId,
       geometry: r.geometry,
-      stops: r.stops.map((s) => ({ lat: s.lat, lng: s.lng, customer: s.customer })),
+      stops: r.stops.map((s) => ({ lat: s.lat, lng: s.lng, customer: s.customer, isNew: s.isNew })),
     })) ?? [];
 
   return (
@@ -249,27 +366,40 @@ function Column({
           </div>
           {side ? (
             <ol className="max-h-72 space-y-2 overflow-y-auto pr-1">
-              {side.routes.map((r, i) => (
-                <li key={`${r.truckId}:${i}`} className="rounded-lg border border-[var(--border)] bg-surface-2 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-ink">Truck {r.truckId}</span>
-                    <span className="text-xs text-ink-muted">
-                      {r.stops.length} stop{r.stops.length === 1 ? "" : "s"} · {Math.round(r.weight / 1000)}k lb · {num(r.miles)} mi · {money(r.cost)}
-                    </span>
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {r.stops.map((s) => (
-                      <span
-                        key={s.id}
-                        title={`${s.customer}${s.orderNumber ? ` · order ${s.orderNumber}` : ""} · ${s.weight.toLocaleString()} lb`}
-                        className="rounded-md border border-[var(--border)] bg-white px-2 py-0.5 text-xs text-ink-muted"
-                      >
-                        {s.customer}
+              {side.routes.map((r, i) => {
+                const hasNew = r.stops.some((s) => s.isNew);
+                return (
+                  <li
+                    key={`${r.truckId}:${i}`}
+                    className="rounded-lg border bg-surface-2 p-3"
+                    style={hasNew ? { borderColor: NEW_STOP, boxShadow: `0 0 0 1px ${NEW_STOP}` } : { borderColor: "var(--border)" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-ink">Truck {r.truckId}</span>
+                      <span className="text-xs text-ink-muted">
+                        {r.stops.length} stop{r.stops.length === 1 ? "" : "s"} · {Math.round(r.weight / 1000)}k lb · {num(r.miles)} mi · {money(r.cost)}
                       </span>
-                    ))}
-                  </div>
-                </li>
-              ))}
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {r.stops.map((s) => (
+                        <span
+                          key={s.id}
+                          title={`${s.customer}${s.orderNumber ? ` · order ${s.orderNumber}` : ""} · ${s.weight.toLocaleString()} lb`}
+                          className="rounded-md border px-2 py-0.5 text-xs"
+                          style={
+                            s.isNew
+                              ? { borderColor: NEW_STOP, backgroundColor: "rgba(124,58,237,0.10)", color: NEW_STOP, fontWeight: 600 }
+                              : { borderColor: "var(--border)", backgroundColor: "#fff", color: "var(--ink-muted)" }
+                          }
+                        >
+                          {s.isNew ? "★ " : ""}
+                          {s.customer}
+                        </span>
+                      ))}
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           ) : (
             <div className="rounded-lg border border-dashed border-[var(--border-strong)] bg-surface-2 p-6 text-center text-sm text-ink-faint">

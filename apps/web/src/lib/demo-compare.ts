@@ -17,7 +17,7 @@ import { buildFleet, type RecordInput, type TruckRoute } from "@/lib/engine/opti
 import { distanceMiles } from "@/lib/engine/geo";
 import { resolveWithCacheDetailed, type ResolvedLeg } from "@/lib/integrations/geometry-cache";
 import { type LatLng } from "@/lib/routing";
-import { pcmilerConfigured } from "@/lib/pcmiler";
+import { pcmilerConfigured, pcmilerGeocode } from "@/lib/pcmiler";
 
 const C = DEFAULT_CONFIG.costs;
 const MILE_RATE = C.cost_per_mile + (C.fuel_surcharge_per_mile ?? 0);
@@ -31,6 +31,30 @@ export type StopView = {
   window: string | null;
   lat: number;
   lng: number;
+  isNew?: boolean; // an order just uploaded from DMSi, folded into this day
+};
+
+// A not-yet-dispatched order uploaded from a DMSi CSV (parsed client-side).
+export type NewOrderInput = {
+  customer_name: string | null;
+  address: string | null;
+  order_size: number | null;
+  delivery_window: string | null;
+  route_id: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+// Where an uploaded order ended up: its own truck before the bridge, and the
+// truck it landed on after (shared, if the bridge could consolidate it).
+export type NewOrderPlacement = {
+  id: string;
+  customer: string;
+  weight: number;
+  beforeTruck: string | null;
+  afterTruck: string | null;
+  consolidated: boolean; // the after-truck also carries other stops
+  afterTruckStops: number;
 };
 export type RouteView = {
   truckId: string;
@@ -62,9 +86,15 @@ export type ComparisonResult =
       before: SideView;
       after: SideView;
       savings: { trucks: number; miles: number; hours: number; cost: number };
+      newOrders: NewOrderPlacement[]; // uploaded orders folded into this day
+      warnings: string[];
     };
 
-export async function runComparison(orgId: string, requestedDate: string | null): Promise<ComparisonResult> {
+export async function runComparison(
+  orgId: string,
+  requestedDate: string | null,
+  extraOrders: NewOrderInput[] = [],
+): Promise<ComparisonResult> {
   const admin = createAdminClient();
 
   // Dataset = the latest completed run that actually analyzed deliveries (the
@@ -110,7 +140,42 @@ export async function runComparison(orgId: string, requestedDate: string | null)
     if (!day) day = days[days.length - 1];
   }
 
-  const fleet = buildFleet(recordsForDay(allRecords, day), DEFAULT_CONFIG, depot);
+  // Fold any uploaded (not-yet-dispatched) orders into THIS day. Each gets its
+  // own fresh truck, so the BEFORE picture shows the extra separate trip dispatch
+  // would add today; the bridge (AFTER) decides whether it can share a truck.
+  const dayRecords = recordsForDay(allRecords, day);
+  const warnings: string[] = [];
+  const newIds = new Set<string>();
+  let n = 0;
+  for (const o of extraOrders) {
+    let lat = o.lat;
+    let lng = o.lng;
+    if ((lat == null || lng == null) && o.address) {
+      const geo = await pcmilerGeocode(o.address);
+      if (geo) [lat, lng] = geo;
+    }
+    if (lat == null || lng == null) {
+      warnings.push(`Couldn't place "${o.customer_name ?? o.address ?? "order"}" on the map — no address match, so it was skipped.`);
+      continue;
+    }
+    const id = `new-${n}`;
+    newIds.add(id);
+    dayRecords.push({
+      id,
+      route_id: o.route_id,
+      customer_name: o.customer_name ?? "Uploaded order",
+      address: o.address,
+      delivery_date: day,
+      delivery_window: o.delivery_window,
+      order_size: o.order_size,
+      truck_id: `NEW-${n + 1}`,
+      lat,
+      lng,
+    });
+    n++;
+  }
+
+  const fleet = buildFleet(dayRecords, DEFAULT_CONFIG, depot);
 
   const depotPt: LatLng = [depot.lat, depot.lng];
   const legOf = (r: TruckRoute): LatLng[] => [depotPt, ...r.stops.map((s) => [s.lat, s.lng] as LatLng), depotPt];
@@ -119,8 +184,9 @@ export async function runComparison(orgId: string, requestedDate: string | null)
     resolveWithCacheDetailed(orgId, fleet.after.map(legOf)),
   ]);
 
-  const before = toSide(fleet.before, beforeLegs.map((l) => l.geometry));
-  const after = toSide(fleet.after, afterLegs.map((l) => l.geometry));
+  const before = toSide(fleet.before, beforeLegs.map((l) => l.geometry), newIds);
+  const after = toSide(fleet.after, afterLegs.map((l) => l.geometry), newIds);
+  const newOrders = computePlacements(newIds, before, after);
 
   // Provider reflects what actually drew the routes, not just what's configured.
   const providerCounts = tallyProviders([...beforeLegs, ...afterLegs]);
@@ -142,7 +208,39 @@ export async function runComparison(orgId: string, requestedDate: string | null)
       hours: round1(before.totalHours - after.totalHours),
       cost: round2(before.totalCost - after.totalCost),
     },
+    newOrders,
+    warnings,
   };
+}
+
+// Trace each uploaded order to the truck it rode before vs after the bridge.
+function computePlacements(newIds: Set<string>, before: SideView, after: SideView): NewOrderPlacement[] {
+  const out: NewOrderPlacement[] = [];
+  for (const id of newIds) {
+    const b = findStop(before, id);
+    const a = findStop(after, id);
+    const stop = b?.stop ?? a?.stop;
+    if (!stop) continue;
+    const afterTruckStops = a?.route.stops.length ?? 0;
+    out.push({
+      id,
+      customer: stop.customer,
+      weight: stop.weight,
+      beforeTruck: b?.route.truckId ?? null,
+      afterTruck: a?.route.truckId ?? null,
+      consolidated: afterTruckStops > 1,
+      afterTruckStops,
+    });
+  }
+  return out;
+}
+
+function findStop(side: SideView, id: string): { route: RouteView; stop: StopView } | null {
+  for (const route of side.routes) {
+    const stop = route.stops.find((s) => s.id === id);
+    if (stop) return { route, stop };
+  }
+  return null;
 }
 
 function tallyProviders(legs: ResolvedLeg[]): Record<string, number> {
@@ -165,7 +263,7 @@ function recordsForDay(records: RecordInput[], day: string): RecordInput[] {
   return records.filter((r) => (r.delivery_date ?? "").slice(0, 10) === day);
 }
 
-function toSide(routes: TruckRoute[], geom: LatLng[][]): SideView {
+function toSide(routes: TruckRoute[], geom: LatLng[][], newIds: Set<string>): SideView {
   const routeViews: RouteView[] = routes.map((r, i) => {
     const geometry = geom[i] ?? [];
     const miles = geometry.length >= 2 ? roadMiles(geometry) : r.miles;
@@ -182,6 +280,7 @@ function toSide(routes: TruckRoute[], geom: LatLng[][]): SideView {
         window: s.window,
         lat: s.lat,
         lng: s.lng,
+        isNew: newIds.has(s.id),
       })),
       weight: Math.round(r.totalWeight),
       miles: round1(miles),

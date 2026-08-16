@@ -11,8 +11,10 @@ const TILE_ATTR = "&copy; OpenStreetMap &copy; CARTO";
 export type DemoRoute = {
   truckId: string;
   geometry: [number, number][];
-  stops: { lat: number; lng: number; customer: string }[];
+  stops: { lat: number; lng: number; customer: string; isNew?: boolean }[];
 };
+
+const NEW_STOP = "#7c3aed"; // violet — the just-uploaded order, stands out from red/green fleets
 
 // Draw one fleet (all routes one color) on the pale Positron basemap — matches
 // the main app's map styling so the two demo columns read as the same system.
@@ -58,16 +60,32 @@ export default function DemoLeaflet({
       ))}
 
       {routes.map((r, i) =>
-        r.stops.map((s, j) => (
-          <CircleMarker
-            key={`${r.truckId}:${i}:${j}`}
-            center={[s.lat, s.lng]}
-            radius={3.5}
-            pathOptions={{ color, fillColor: color, fillOpacity: 0.9, weight: 1 }}
-          >
-            <Tooltip>{s.customer}</Tooltip>
-          </CircleMarker>
-        )),
+        r.stops.map((s, j) =>
+          s.isNew ? (
+            // The uploaded order — larger violet marker with a halo so the room
+            // can see exactly where it landed on each side.
+            <CircleMarker
+              key={`${r.truckId}:${i}:${j}`}
+              center={[s.lat, s.lng]}
+              radius={8}
+              pathOptions={{ color: "#fff", fillColor: NEW_STOP, fillOpacity: 1, weight: 3 }}
+              className="pulse-dot"
+            >
+              <Tooltip permanent direction="top" offset={[0, -8]}>
+                New order: {s.customer}
+              </Tooltip>
+            </CircleMarker>
+          ) : (
+            <CircleMarker
+              key={`${r.truckId}:${i}:${j}`}
+              center={[s.lat, s.lng]}
+              radius={3.5}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.9, weight: 1 }}
+            >
+              <Tooltip>{s.customer}</Tooltip>
+            </CircleMarker>
+          ),
+        ),
       )}
 
       <Marker position={depotPos} icon={depotIcon}>

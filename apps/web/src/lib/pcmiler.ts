@@ -122,18 +122,53 @@ export async function pcmilerMileage(
   return { miles: last.TMiles, hours: last.THours ?? 0 };
 }
 
-/** Forward geocode an address to lat/lng (used when a feed lacks coordinates). */
+/**
+ * Forward geocode an address to lat/lng (used when a feed lacks coordinates).
+ * PC*MILER's /locations endpoint requires STRUCTURED fields — it rejects a
+ * single-line string with "requires (City with optional State) or Zip" — so we
+ * split the address into street / city / state / postcode first. Needs at least
+ * a ZIP or a city+state to return a match.
+ */
 export async function pcmilerGeocode(address: string): Promise<LatLng | null> {
-  const data = (await pcmilerGet("/locations", {
-    region: "NA",
-    dataVersion: "Current",
-    location: address,
-  })) as { Coords?: { Lat: string; Lon: string } }[] | null;
-  const c = data?.[0]?.Coords;
+  const { street, city, state, postcode } = parseUsAddress(address);
+  if (!postcode && !(city && state)) return null;
+
+  const params: Record<string, string> = { region: "NA", dataVersion: "Current" };
+  if (street) params.street = street;
+  if (city) params.city = city;
+  if (state) params.state = state;
+  if (postcode) params.postcode = postcode;
+
+  const data = (await pcmilerGet("/locations", params)) as { Coords?: { Lat: string; Lon: string } }[] | null;
+  const hit = Array.isArray(data) ? data.find((d) => d?.Coords?.Lat != null) : null;
+  const c = hit?.Coords;
   if (!c) return null;
   const lat = Number(c.Lat);
   const lng = Number(c.Lon);
   return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+}
+
+// Best-effort split of a US address string ("100 South St, Pittsfield, MA 01201")
+// into the fields PC*MILER's geocoder wants. Tolerant of missing pieces.
+function parseUsAddress(address: string): { street: string; city: string; state: string; postcode: string } {
+  const postcode = (address.match(/\b(\d{5})(?:-\d{4})?\b/) ?? [])[1] ?? "";
+  // Prefer a 2-letter state sitting right before the ZIP or at the end.
+  const state =
+    (address.match(/\b([A-Za-z]{2})\b(?=[,\s]*\d{5}\b)/) ?? [])[1] ??
+    (address.match(/\b([A-Za-z]{2})\b\s*$/) ?? [])[1] ??
+    "";
+  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+  const street = parts[0] ?? "";
+  // City = the comma-part just before the one holding the state or ZIP.
+  let city = "";
+  for (let i = parts.length - 1; i >= 1; i--) {
+    if (/\b[A-Za-z]{2}\b/.test(parts[i]) || /\d{5}/.test(parts[i])) {
+      city = parts[i - 1] ?? "";
+      break;
+    }
+  }
+  if (!city && parts.length >= 2) city = parts[parts.length - 2];
+  return { street, city, state: state.toUpperCase(), postcode };
 }
 
 // PC*MILER returns a GeoJSON Feature whose geometry is usually a MultiLineString
