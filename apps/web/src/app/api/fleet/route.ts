@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireOrg } from "@/lib/api-auth";
+import { requirePublicOrg } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_CONFIG } from "@/lib/config";
 import { buildFleet, type RecordInput, type TruckRoute } from "@/lib/engine/optimize";
@@ -16,7 +16,7 @@ export const maxDuration = 60; // Vercel Hobby cap; cold "all"-scope loads may n
 // Query: ?uploadId=<uuid> (defaults to latest completed run's upload)
 //        ?scope=day|week|all  &date=YYYY-MM-DD (anchor for day/week)
 export async function POST(request: Request) {
-  const guard = await requireOrg(request);
+  const guard = await requirePublicOrg(request);
   if (!guard.ok) return guard.response;
   const orgId = guard.ctx.org.id;
   const admin = createAdminClient();

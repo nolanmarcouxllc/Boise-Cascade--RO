@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireOrg } from "@/lib/api-auth";
+import { requirePublicOrg } from "@/lib/api-auth";
 import { runComparison, type NewOrderInput } from "@/lib/demo-compare";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export const maxDuration = 60; // Vercel Hobby cap; first (cold) run warms the g
  * }
  */
 export async function POST(request: Request) {
-  const guard = await requireOrg(request);
+  const guard = await requirePublicOrg(request);
   if (!guard.ok) return guard.response;
 
   const body = await request.json().catch(() => ({}));

@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSessionContext } from "@/lib/auth";
+import { getViewerContext } from "@/lib/auth";
 import { Nav } from "@/components/nav";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LogoMark } from "@/components/logo";
@@ -12,9 +13,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const ctx = await getSessionContext();
+  const ctx = await getViewerContext();
   if (!ctx) redirect("/login");
   if (!ctx.org) redirect("/onboarding");
+  const guest = ctx.isGuest === true;
 
   return (
     <div className="min-h-screen">
@@ -28,13 +30,29 @@ export default async function AppLayout({
                 {ctx.org.name}
               </span>
             </div>
-            <Nav />
+            <Nav guest={guest} />
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-ink-muted sm:inline">
-              {ctx.email}
-            </span>
-            <SignOutButton />
+            {guest ? (
+              <>
+                <span className="hidden rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 sm:inline">
+                  Public demo
+                </span>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-ink-muted hover:text-ink"
+                >
+                  Sign in
+                </Link>
+              </>
+            ) : (
+              <>
+                <span className="hidden text-sm text-ink-muted sm:inline">
+                  {ctx.email}
+                </span>
+                <SignOutButton />
+              </>
+            )}
           </div>
         </div>
       </header>

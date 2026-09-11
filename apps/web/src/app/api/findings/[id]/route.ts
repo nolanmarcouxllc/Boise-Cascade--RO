@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireOrg, assertOrg } from "@/lib/api-auth";
+import { requirePublicOrg, assertOrg } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_CONFIG } from "@/lib/config";
 import { distanceMiles } from "@/lib/engine/geo";
@@ -18,7 +18,7 @@ type Rec = {
 // per-truck manifest, embedded BEFORE (involved trucks' full day routes) and
 // AFTER (one consolidated route), and the numbers. Auth + org scoped.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const guard = await requireOrg(request);
+  const guard = await requirePublicOrg(request);
   if (!guard.ok) return guard.response;
   const orgId = guard.ctx.org.id;
   const admin = createAdminClient();

@@ -11,11 +11,17 @@ const LINKS = [
   { href: "/integrations", label: "Connected systems" },
 ];
 
-export function Nav() {
+// Public-demo visitors see only the two read-only showcase pages; the
+// back-office / write pages are hidden (and their write actions are blocked
+// server-side regardless).
+const GUEST_LINKS = LINKS.filter((l) => l.href === "/dashboard" || l.href === "/compare");
+
+export function Nav({ guest = false }: { guest?: boolean }) {
   const pathname = usePathname();
+  const links = guest ? GUEST_LINKS : LINKS;
   return (
     <nav className="flex gap-1">
-      {LINKS.map((l) => {
+      {links.map((l) => {
         const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
         return (
           <Link

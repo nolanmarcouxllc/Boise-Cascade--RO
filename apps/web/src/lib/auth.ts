@@ -1,10 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import { publicDemoEnabled, resolvePublicOrg } from "@/lib/public-demo";
 import type { Org } from "@/lib/types";
 
 export type SessionContext = {
   userId: string;
   email: string | null;
   org: Org | null; // null => user has no membership yet (needs onboarding)
+  isGuest?: boolean; // true => anonymous public-demo visitor (read-only)
 };
 
 /**
@@ -34,4 +36,20 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   const org = Array.isArray(joined) ? (joined[0] ?? null) : (joined ?? null);
 
   return { userId: user.id, email: user.email ?? null, org };
+}
+
+/**
+ * Viewer context for PUBLIC-facing surfaces (the app layout + read-only APIs):
+ * the real signed-in context when there is one, otherwise — in public demo mode
+ * — a read-only guest pinned to the demo org. Never use this to authorize a
+ * write: getSessionContext() (which stays null for guests) is the write gate.
+ */
+export async function getViewerContext(): Promise<SessionContext | null> {
+  const ctx = await getSessionContext();
+  if (ctx) return ctx;
+  if (publicDemoEnabled()) {
+    const org = await resolvePublicOrg();
+    if (org) return { userId: "public-guest", email: null, org, isGuest: true };
+  }
+  return null;
 }

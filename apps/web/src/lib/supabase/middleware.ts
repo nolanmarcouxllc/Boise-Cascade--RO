@@ -43,8 +43,12 @@ export async function updateSession(request: NextRequest) {
   // HMAC-verified endpoints (EDI webhook, health) — never redirect them to a
   // login page.
   const isApi = path.startsWith("/api");
+  // Public demo mode: let anonymous visitors through to the (read-only) app
+  // instead of bouncing them to /login. (Env read inline — this runs on the
+  // edge and must not import the server-only demo module.)
+  const publicDemo = (process.env.PUBLIC_DEMO ?? "on").toLowerCase() !== "off";
 
-  if (!user && !isPublic && !isApi) {
+  if (!user && !isPublic && !isApi && !publicDemo) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", path);
