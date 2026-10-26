@@ -21,7 +21,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Org } from "@/lib/types";
 
 export function publicDemoEnabled(): boolean {
-  return (process.env.PUBLIC_DEMO ?? "on").toLowerCase() !== "off";
+  // Private by default — login required. Set PUBLIC_DEMO="on" to open the
+  // read-only public demo again.
+  return (process.env.PUBLIC_DEMO ?? "off").toLowerCase() === "on";
 }
 
 let cachedOrg: Org | null = null;

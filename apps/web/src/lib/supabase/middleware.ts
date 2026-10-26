@@ -44,9 +44,10 @@ export async function updateSession(request: NextRequest) {
   // login page.
   const isApi = path.startsWith("/api");
   // Public demo mode: let anonymous visitors through to the (read-only) app
-  // instead of bouncing them to /login. (Env read inline — this runs on the
-  // edge and must not import the server-only demo module.)
-  const publicDemo = (process.env.PUBLIC_DEMO ?? "on").toLowerCase() !== "off";
+  // instead of bouncing them to /login. Private by default; set PUBLIC_DEMO="on"
+  // to open it. (Env read inline — this runs on the edge and must not import the
+  // server-only demo module.)
+  const publicDemo = (process.env.PUBLIC_DEMO ?? "off").toLowerCase() === "on";
 
   if (!user && !isPublic && !isApi && !publicDemo) {
     const url = request.nextUrl.clone();
